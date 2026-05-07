@@ -117,6 +117,22 @@ tr:hover td{background:#FAFAF8;}
 .metric-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
 .mc-label{font-size:11px;color:var(--text-3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
 .mc-val{font-size:22px;font-weight:600;}
+.chart-fullscreen-modal{position:fixed;inset:0;background:rgba(26,22,20,.42);z-index:2000;display:none;padding:28px;}
+.chart-fullscreen-modal.show{display:flex;}
+.chart-fullscreen-shell{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.18);width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
+.chart-fullscreen-head{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);}
+.chart-fullscreen-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:500;color:var(--text);}
+.chart-fullscreen-close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text-2);font-size:22px;line-height:1;cursor:pointer;}
+.chart-fullscreen-close:hover{border-color:var(--accent);color:var(--accent);}
+.chart-fullscreen-body{flex:1;min-height:0;padding:18px 22px 22px;}
+.chart-fullscreen-body .plotly-graph-div{width:100%!important;height:100%!important;}
+body.chart-fullscreen-open{overflow:hidden;}
+@media (max-width:700px){
+  .chart-fullscreen-modal{padding:10px;}
+  .chart-fullscreen-shell{border-radius:10px;}
+  .chart-fullscreen-head{height:50px;padding:0 12px;}
+  .chart-fullscreen-body{padding:10px 10px 14px;}
+}
 
 /* CATEGORY BARS */
 .cat-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -175,6 +191,23 @@ tr:hover td{background:#FAFAF8;}
 .user-badge img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
 .btn-logout{font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);cursor:pointer;padding:3px 8px;border-radius:4px;font-family:'DM Sans',sans-serif;}
 .btn-logout:hover{color:var(--red);border-color:var(--red);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:520px;width:90%;max-height:82vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18);}
+.modal-box.wide{max-width:660px;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-3);padding:0 4px;line-height:1;}
+.modal-close:hover{color:var(--text);}
+
+/* TABLE ACTION BUTTONS */
+.btn-action{padding:3px 9px;font-size:11px;border-radius:5px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;margin:0 2px;}
+.btn-edit{background:var(--accent-light);color:var(--accent-dark);}
+.btn-edit:hover{background:#E8C4AC;}
+.btn-delete{background:var(--red-bg);color:var(--red);}
+.btn-delete:hover{background:#F5C5C5;}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -371,6 +404,7 @@ tr:hover td{background:#FAFAF8;}
             <th>Tipo</th>
             <th>Status</th>
             <th style="text-align:right">Valor</th>
+            <th style="width:110px;text-align:center">Ações</th>
           </tr>
         </thead>
         <tbody id="history-body"></tbody>
@@ -420,11 +454,16 @@ tr:hover td{background:#FAFAF8;}
 <div class="panel" id="panel-analise">
 
   <!-- PERIOD SELECTOR -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-    <button class="chip-btn chip-active" id="period-7" onclick="setPeriod(7,this)">Últimos 7 dias</button>
-    <button class="chip-btn" id="period-15" onclick="setPeriod(15,this)">15 dias</button>
-    <button class="chip-btn" id="period-30" onclick="setPeriod(30,this)">30 dias</button>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <button class="chip-btn" id="period-current-week" onclick="setAnalysisPeriod('currentWeek',this)">Semana atual</button>
+    <button class="chip-btn" id="period-previous-week" onclick="setAnalysisPeriod('previousWeek',this)">Semana anterior</button>
+    <button class="chip-btn" id="period-current-month" onclick="setAnalysisPeriod('currentMonth',this)">Mês atual</button>
+    <button class="chip-btn" id="period-previous-month" onclick="setAnalysisPeriod('previousMonth',this)">Mês anterior</button>
+    <button class="chip-btn chip-active" id="period-last7" onclick="setAnalysisPeriod('last7',this)">Últimos 7 dias</button>
+    <button class="chip-btn" id="period-last15" onclick="setAnalysisPeriod('last15',this)">15 dias</button>
+    <button class="chip-btn" id="period-last30" onclick="setAnalysisPeriod('last30',this)">30 dias</button>
   </div>
+  <div id="analise-period-label" style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Analisando —</div>
 
   <!-- KPI ROW -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;" id="analise-kpis"></div>
@@ -442,7 +481,7 @@ tr:hover td{background:#FAFAF8;}
   </div>
 
   <!-- CHARTS ROW 2 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
     <div class="card">
       <div class="card-title" style="font-size:14px;margin-bottom:6px;">Categorias — período atual</div>
       <div id="analise-cats" style="height:220px;"></div>
@@ -453,9 +492,36 @@ tr:hover td{background:#FAFAF8;}
     </div>
   </div>
 
+  <!-- CHARTS ROW 3 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="card">
+      <div class="card-title" style="font-size:14px;margin-bottom:6px;">Categorias & descrições</div>
+      <div id="chart-sunburst" style="height:280px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="font-size:14px;margin-bottom:6px;">Despesas por descrição</div>
+      <div id="drill-breadcrumb" style="display:none;font-size:11px;color:var(--text-3);margin-bottom:8px;align-items:center;gap:4px;">
+        <span id="drill-back" style="color:var(--accent);cursor:pointer;font-weight:500;">← Categorias</span>
+        <span>/</span>
+        <span id="drill-cat-name" style="color:var(--text-2);"></span>
+      </div>
+      <div id="chart-drill" style="height:260px;"></div>
+    </div>
+  </div>
+
 </div>
 
 </div><!-- /main -->
+
+<div class="chart-fullscreen-modal" id="chart-fullscreen-modal" onclick="closeChartFullscreen(event)">
+  <div class="chart-fullscreen-shell" onclick="event.stopPropagation()">
+    <div class="chart-fullscreen-head">
+      <div class="chart-fullscreen-title" id="chart-fullscreen-title">Gráfico</div>
+      <button class="chart-fullscreen-close" onclick="closeChartFullscreen()" aria-label="Fechar tela cheia">&times;</button>
+    </div>
+    <div class="chart-fullscreen-body" id="chart-fullscreen-body"></div>
+  </div>
+</div>
 
 <div id="auth-overlay">
   <div class="auth-card">
@@ -469,6 +535,71 @@ tr:hover td{background:#FAFAF8;}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ======================== MODAL: EDITAR LANÇAMENTO ======================== -->
+<div class="modal-overlay" id="edit-modal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Editar Lançamento</span>
+      <button class="modal-close" onclick="closeEditModal()">&#x2715;</button>
+    </div>
+    <div class="form-grid cols3" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Data</label>
+        <input type="date" id="edit-date"/>
+      </div>
+      <div class="field">
+        <label>Valor (R$)</label>
+        <input type="number" id="edit-value" step="0.01" min="0"/>
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <select id="edit-type" onchange="onEditTypeChange()">
+          <option value="despesa">Despesa</option>
+          <option value="receita">Receita</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Descrição</label>
+        <input type="text" id="edit-desc"/>
+      </div>
+      <div class="field">
+        <label>Categoria</label>
+        <select id="edit-cat"></select>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Fonte</label>
+        <select id="edit-source"></select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="edit-status">
+          <option value="efetivado">Efetivado</option>
+          <option value="pendente">Pendente</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-outline btn-sm" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditTxn()">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== MODAL: DETALHE DO GRÁFICO ======================== -->
+<div class="modal-overlay" id="chart-modal" onclick="if(event.target===this)closeChartModal()">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <span class="modal-title" id="chart-modal-title">Detalhes</span>
+      <button class="modal-close" onclick="closeChartModal()">&#x2715;</button>
+    </div>
+    <div id="chart-modal-body"></div>
+  </div>
+</div>
 
 <script>
 // =================== CATEGORY & DESC CHIPS ===================
@@ -866,12 +997,14 @@ function renderHistory() {
   document.getElementById('pag-info').textContent = `${total} lançamentos · página ${histPage+1}/${Math.max(1,pages)}`;
 
   const tbody = document.getElementById('history-body');
-  if (!slice.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Nenhum resultado.</td></tr>'; return; }
+  if (!slice.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:24px;">Nenhum resultado.</td></tr>'; return; }
 
   tbody.innerHTML = slice.map(t => {
     const instBadge = t.installment ? `<span class="badge badge-parcelado">${t.installment}</span> ` : '';
     const legacyBadge = t.legacy ? `<span class="badge badge-legacy">legacy</span>` : '';
     const statusNorm = normalizeStatus(t.status);
+    const tidx = allTxns.indexOf(t);
+    const actionBtns = `<button class="btn-action btn-edit" onclick="openEditModal(${tidx})">Editar</button><button class="btn-action btn-delete" onclick="deleteTxn(${tidx})">Excluir</button>`;
     return `<tr>
       <td style="white-space:nowrap">${t.date||''}</td>
       <td>${instBadge}${esc(t.description||'')} ${legacyBadge}</td>
@@ -880,6 +1013,7 @@ function renderHistory() {
       <td><span class="badge badge-${t.type}">${t.type}</span></td>
       <td><span class="badge badge-${statusNorm}">${statusNorm}</span></td>
       <td style="text-align:right" class="${t.type==='receita'?'val-pos':'val-neg'}">${t.type==='receita'?'+':'-'}${fmtCurrency(t.value)}</td>
+      <td style="text-align:center;white-space:nowrap">${actionBtns}</td>
     </tr>`;
   }).join('');
 }
@@ -1036,98 +1170,95 @@ async function importCSV(input) {
 }
 
 // =================== ANÁLISE ===================
-let analysisDays = 7;
+let analysisPeriodMode = 'last7';
+
+function setAnalysisPeriod(mode, btn) {
+  analysisPeriodMode = mode;
+  document.querySelectorAll('[id^="period-"]').forEach(b => b.classList.remove('chip-active'));
+  if (btn) btn.classList.add('chip-active');
+  renderAnalise();
+}
 
 function setPeriod(days, btn) {
-  analysisDays = days;
-  document.querySelectorAll('[id^="period-"]').forEach(b => b.classList.remove('chip-active'));
-  btn.classList.add('chip-active');
-  renderAnalise();
+  const mode = days === 15 ? 'last15' : days === 30 ? 'last30' : 'last7';
+  setAnalysisPeriod(mode, btn);
 }
 
 function todayDate() {
   const now = new Date();
-  const recent = allTxns.some(t => { const d = parseDate(t.date); return (now - d) < 30 * 86400000; });
-  return recent ? now : parseDate(allTxns.map(t=>t.date).filter(Boolean).sort().reverse()[0]);
-}
-
-function setupCanvas(id, h) {
-  const canvas = document.getElementById(id);
-  const parent = canvas.parentElement;
-  const W = parent.clientWidth - 40; // subtract card padding
-  const dpr = window.devicePixelRatio || 1;
-  canvas.style.width = W + 'px';
-  canvas.style.height = h + 'px';
-  canvas.width = W * dpr;
-  canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  return { ctx, W, H: h };
-}
-
-function renderAnalise() {
-  const today = todayDate();
-  const periodEnd = new Date(today); periodEnd.setHours(23,59,59);
-  const periodStart = new Date(today); periodStart.setDate(periodStart.getDate() - analysisDays + 1); periodStart.setHours(0,0,0,0);
-  const prevEnd = new Date(periodStart); prevEnd.setDate(prevEnd.getDate() - 1); prevEnd.setHours(23,59,59);
-  const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - analysisDays + 1); prevStart.setHours(0,0,0,0);
-
-  const curr = allTxns.filter(t => { const d = parseDate(t.date); return d >= periodStart && d <= periodEnd; });
-  const prev = allTxns.filter(t => { const d = parseDate(t.date); return d >= prevStart && d <= prevEnd; });
-  const currDesp = curr.filter(t=>t.type==='despesa');
-  const prevDesp = prev.filter(t=>t.type==='despesa');
-  const currRec  = curr.filter(t=>t.type==='receita');
-
-  const totalDesp = currDesp.reduce((s,t)=>s+t.value,0);
-  const prevTotalDesp = prevDesp.reduce((s,t)=>s+t.value,0);
-  const totalRec  = currRec.reduce((s,t)=>s+t.value,0);
-  const avgDaily  = totalDesp / analysisDays;
-  const diffPct   = prevTotalDesp > 0 ? ((totalDesp - prevTotalDesp) / prevTotalDesp * 100) : 0;
-  const diffSign  = diffPct >= 0 ? '↑' : '↓';
-  const diffColor = diffPct >= 0 ? 'var(--red)' : 'var(--green)';
-
-  document.getElementById('analise-kpis').innerHTML = `
-    <div class="metric-card"><div class="mc-label">Despesas</div><div class="mc-val" style="color:var(--red)">${fmtCurrency(totalDesp)}</div></div>
-    <div class="metric-card"><div class="mc-label">Receitas</div><div class="mc-val" style="color:var(--green)">${fmtCurrency(totalRec)}</div></div>
-    <div class="metric-card"><div class="mc-label">Média/dia</div><div class="mc-val">${fmtCurrency(avgDaily)}</div></div>
-    <div class="metric-card"><div class="mc-label">vs período anterior</div><div class="mc-val" style="color:${diffColor}">${diffSign} ${Math.abs(diffPct).toFixed(0)}%</div></div>`;
-
-  drawDailyChart(periodStart, analysisDays, allTxns);
-  drawCompareChart(currDesp, prevDesp);
-  renderCatAnalise(currDesp);
-  drawTrendChart();
-}
-
-// =================== HELPERS ===================
-
-function setPeriod(days, btn) {
-  analysisDays = days;
-  document.querySelectorAll('[id^="period-"]').forEach(b => b.classList.remove('chip-active'));
-  btn.classList.add('chip-active');
-  renderAnalise();
-}
-
-function todayDate() {
-  // Use latest date in allTxns as "today" so legacy data also shows
-  // But prioritize actual today if new txns exist
-  const now = new Date();
-  // Check if any txn is within 30 days of today
   const recent = allTxns.some(t => {
     const d = parseDate(t.date);
-    return (now - d) < 30 * 86400000;
+    return d.getTime() > 0 && Math.abs(now - d) < 30 * 86400000;
   });
-  return recent ? now : parseDate(allTxns.map(t=>t.date).filter(Boolean).sort().reverse()[0]);
+  if (recent) return now;
+
+  const latest = allTxns.map(t => parseDate(t.date)).filter(d => d.getTime() > 0).sort((a,b) => b - a)[0];
+  return latest || now;
 }
 
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  return d;
 }
+
+function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23,59,59,999);
+  return d;
+}
+
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function inclusiveDays(start, end) {
+  return Math.max(1, Math.round((startOfDay(end) - startOfDay(start)) / 86400000) + 1);
+}
+
+function getWeekRange(anchor, offsetWeeks = 0) {
+  const day = anchor.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const start = startOfDay(addDays(anchor, mondayOffset + offsetWeeks * 7));
+  const end = endOfDay(addDays(start, 6));
+  return { start, end };
+}
+
+function getMonthRange(anchor, offsetMonths = 0) {
+  const start = new Date(anchor.getFullYear(), anchor.getMonth() + offsetMonths, 1);
+  const end = new Date(anchor.getFullYear(), anchor.getMonth() + offsetMonths + 1, 0);
+  return { start: startOfDay(start), end: endOfDay(end) };
+}
+
+function getAnalysisPeriodRange() {
+  const anchor = todayDate();
+  let periodStart, periodEnd;
+
+  if (analysisPeriodMode === 'currentWeek') {
+    ({ start: periodStart, end: periodEnd } = getWeekRange(anchor, 0));
+  } else if (analysisPeriodMode === 'previousWeek') {
+    ({ start: periodStart, end: periodEnd } = getWeekRange(anchor, -1));
+  } else if (analysisPeriodMode === 'currentMonth') {
+    ({ start: periodStart, end: periodEnd } = getMonthRange(anchor, 0));
+  } else if (analysisPeriodMode === 'previousMonth') {
+    ({ start: periodStart, end: periodEnd } = getMonthRange(anchor, -1));
+  } else {
+    const days = analysisPeriodMode === 'last15' ? 15 : analysisPeriodMode === 'last30' ? 30 : 7;
+    periodEnd = endOfDay(anchor);
+    periodStart = startOfDay(addDays(anchor, -days + 1));
+  }
+
+  const days = inclusiveDays(periodStart, periodEnd);
+  const prevEnd = endOfDay(addDays(periodStart, -1));
+  const prevStart = startOfDay(addDays(prevEnd, -days + 1));
+  return { periodStart, periodEnd, prevStart, prevEnd, days };
+}
+
 function isNotFuture(t) {
-  const [,m,y] = (t.date||'').split('/');
-  if (!m||!y) return true;
-  const key = `${y}-${m.padStart(2,'0')}`;
-  return key <= currentMonthKey();
+  const d = parseDate(t.date);
+  return d.getTime() === 0 || startOfDay(d) <= startOfDay(new Date());
 }
 
 function noAjuste(t) { return t.category !== 'Ajuste'; }
@@ -1138,11 +1269,7 @@ function isEfetivado(t) {
 function validTxn(t) { return noAjuste(t) && isNotFuture(t) && isEfetivado(t); }
 
 function renderAnalise() {
-  const today = todayDate();
-  const periodEnd = new Date(today); periodEnd.setHours(23,59,59);
-  const periodStart = new Date(today); periodStart.setDate(periodStart.getDate() - analysisDays + 1); periodStart.setHours(0,0,0,0);
-  const prevEnd = new Date(periodStart); prevEnd.setDate(prevEnd.getDate() - 1); prevEnd.setHours(23,59,59);
-  const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - analysisDays + 1); prevStart.setHours(0,0,0,0);
+  const { periodStart, periodEnd, prevStart, prevEnd, days } = getAnalysisPeriodRange();
 
   const curr = allTxns.filter(t => { const d = parseDate(t.date); return d >= periodStart && d <= periodEnd; }).filter(validTxn);
   const prev = allTxns.filter(t => { const d = parseDate(t.date); return d >= prevStart && d <= prevEnd; }).filter(validTxn);
@@ -1154,10 +1281,12 @@ function renderAnalise() {
   const totalDesp = currDesp.reduce((s,t)=>s+t.value,0);
   const prevTotalDesp = prevDesp.reduce((s,t)=>s+t.value,0);
   const totalRec  = currRec.reduce((s,t)=>s+t.value,0);
-  const avgDaily  = totalDesp / analysisDays;
+  const avgDaily  = totalDesp / days;
   const diffPct   = prevTotalDesp > 0 ? ((totalDesp - prevTotalDesp) / prevTotalDesp * 100) : 0;
   const diffSign  = diffPct >= 0 ? '↑' : '↓';
   const diffColor = diffPct >= 0 ? 'var(--red)' : 'var(--green)';
+  const periodLabel = document.getElementById('analise-period-label');
+  if (periodLabel) periodLabel.textContent = `Analisando ${fmtDate(periodStart)} a ${fmtDate(periodEnd)}`;
 
   document.getElementById('analise-kpis').innerHTML = `
     <div class="metric-card"><div class="mc-label">Despesas</div><div class="mc-val" style="color:var(--red)">${fmtCurrency(totalDesp)}</div></div>
@@ -1165,10 +1294,12 @@ function renderAnalise() {
     <div class="metric-card"><div class="mc-label">Média/dia</div><div class="mc-val">${fmtCurrency(avgDaily)}</div></div>
     <div class="metric-card"><div class="mc-label">vs período anterior</div><div class="mc-val" style="color:${diffColor}">${diffSign} ${Math.abs(diffPct).toFixed(0)}%</div></div>`;
 
-  drawDailyChart(periodStart, analysisDays, allTxns.filter(validTxn));
+  drawDailyChart(periodStart, days, allTxns.filter(validTxn));
   drawCompareChart(currDesp, prevDesp);
   drawCatsChart(currDesp);
   drawTrendChart();
+  drawSunburstChart(currDesp);
+  drawDrillChart(currDesp);
 }
 
 const PLOTLY_LAYOUT_BASE = {
@@ -1181,13 +1312,82 @@ const PLOTLY_LAYOUT_BASE = {
   showlegend: true,
   legend: { orientation: 'h', y: -0.18, x: 0, font: { size: 10 } },
 };
-const PLOTLY_CONFIG = { displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ['select2d','lasso2d','autoScale2d'], toImageButtonOptions: { format: 'png', filename: 'grafico-financeiro' }, responsive: true };
+const PLOTLY_FULLSCREEN_ICON = {
+  width: 24,
+  height: 24,
+  path: 'M5 5h6v2H7v4H5V5zm8 0h6v6h-2V7h-4V5zM5 13h2v4h4v2H5v-6zm12 0h2v6h-6v-2h4v-4z'
+};
+let plotlyFullscreenSource = null;
+const PLOTLY_CONFIG = {
+  displayModeBar: true,
+  displaylogo: false,
+  modeBarButtonsToRemove: ['select2d','lasso2d','autoScale2d'],
+  modeBarButtonsToAdd: [{
+    name: 'Tela cheia',
+    title: 'Tela cheia',
+    icon: PLOTLY_FULLSCREEN_ICON,
+    click: (gd) => {
+      openChartFullscreen(gd);
+    }
+  }],
+  toImageButtonOptions: { format: 'png', filename: 'grafico-financeiro' },
+  responsive: true
+};
+const PLOTLY_MODAL_CONFIG = { ...PLOTLY_CONFIG, modeBarButtonsToAdd: [] };
+function getChartTitle(gd) {
+  return gd.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || 'Gráfico';
+}
+function openChartFullscreen(gd) {
+  const modal = document.getElementById('chart-fullscreen-modal');
+  const body = document.getElementById('chart-fullscreen-body');
+  const title = document.getElementById('chart-fullscreen-title');
+  if (!modal || !body || !gd?.data || !gd?.layout) return;
+
+  plotlyFullscreenSource = gd;
+  title.textContent = getChartTitle(gd);
+  body.innerHTML = '<div id="chart-fullscreen-plot" style="width:100%;height:100%;"></div>';
+  modal.classList.add('show');
+  document.body.classList.add('chart-fullscreen-open');
+
+  const layout = {
+    ...gd.layout,
+    height: null,
+    width: null,
+    autosize: true,
+    margin: { ...gd.layout.margin, t: Math.max(gd.layout.margin?.t || 10, 30), b: Math.max(gd.layout.margin?.b || 40, 58) },
+    font: { ...gd.layout.font, size: 13 },
+    legend: { ...gd.layout.legend, font: { ...(gd.layout.legend?.font || {}), size: 12 } },
+  };
+  Plotly.newPlot('chart-fullscreen-plot', gd.data, layout, PLOTLY_MODAL_CONFIG).then((plot) => {
+    setTimeout(() => Plotly.Plots.resize(plot), 60);
+  });
+}
+function closeChartFullscreen(event) {
+  if (event && event.target !== event.currentTarget) return;
+  const modal = document.getElementById('chart-fullscreen-modal');
+  const body = document.getElementById('chart-fullscreen-body');
+  modal?.classList.remove('show');
+  document.body.classList.remove('chart-fullscreen-open');
+  if (body) {
+    const plot = document.getElementById('chart-fullscreen-plot');
+    if (plot) Plotly.purge(plot);
+    body.innerHTML = '';
+  }
+  if (plotlyFullscreenSource) setTimeout(() => Plotly.Plots.resize(plotlyFullscreenSource), 60);
+  plotlyFullscreenSource = null;
+}
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.getElementById('chart-fullscreen-modal')?.classList.contains('show')) {
+    closeChartFullscreen();
+  }
+});
 
 function drawDailyChart(periodStart, days, txns) {
-  const labels = [], despValues = [], recValues = [];
+  const labels = [], despValues = [], recValues = [], fullDates = [];
   for (let i = 0; i < days; i++) {
     const d = new Date(periodStart); d.setDate(d.getDate() + i);
     const dayStr = fmtDate(d);
+    fullDates.push(dayStr);
     labels.push(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`);
     const dayTxns = txns.filter(t => t.date === dayStr);
     despValues.push(dayTxns.filter(t=>t.type==='despesa').reduce((s,t)=>s+t.value, 0));
@@ -1215,6 +1415,14 @@ function drawDailyChart(periodStart, days, txns) {
   };
 
   Plotly.newPlot('chart-daily', traces, layout, PLOTLY_CONFIG);
+  document.getElementById('chart-daily').on('plotly_click', function(data) {
+    const pt = data.points[0];
+    const idx = labels.indexOf(pt.x);
+    const fullDate = fullDates[idx];
+    const type = pt.data.name === 'Receita' ? 'receita' : 'despesa';
+    const label = pt.data.name === 'Receita' ? 'Receitas' : 'Despesas';
+    showChartModal(`${label} em ${pt.x}`, txns.filter(t => t.date === fullDate && t.type === type));
+  });
 }
 
 function drawCompareChart(curr, prev) {
@@ -1247,6 +1455,13 @@ function drawCompareChart(curr, prev) {
   };
 
   Plotly.newPlot('chart-compare', traces, layout, PLOTLY_CONFIG);
+  document.getElementById('chart-compare').on('plotly_click', function(data) {
+    const pt = data.points[0];
+    const cat = pt.y;
+    const isPrev = pt.data.name.includes('anterior');
+    const pool = isPrev ? prev : curr;
+    showChartModal(`${cat} — ${pt.data.name}`, pool.filter(t => t.category === cat));
+  });
 }
 
 function drawCatsChart(currDesp) {
@@ -1281,6 +1496,145 @@ function drawCatsChart(currDesp) {
   };
 
   Plotly.newPlot('analise-cats', [trace], layout, PLOTLY_CONFIG);
+  document.getElementById('analise-cats').on('plotly_click', function(data) {
+    const cat = data.points[0].y;
+    showChartModal(`Despesas — ${cat}`, currDesp.filter(t => t.category === cat));
+  });
+}
+
+const _CAT_PALETTE = ['#C8622A','#E2735A','#D4A843','#5AAA6B','#4A90D9','#9B6DB5','#E87D4A','#6B8F71','#A05C3B','#7B6D8D','#4AADAD','#BFA05A'];
+let _drillData = [];
+
+function _catColors(cats) {
+  const map = {};
+  cats.forEach((c, i) => { map[c] = _CAT_PALETTE[i % _CAT_PALETTE.length]; });
+  return map;
+}
+
+function drawSunburstChart(currDesp) {
+  if (!currDesp.length) {
+    document.getElementById('chart-sunburst').innerHTML = '<div class="empty" style="padding:60px 0">Sem despesas no período.</div>';
+    return;
+  }
+
+  const cats = [...new Set(currDesp.map(t => t.category))];
+  const colorMap = _catColors(cats);
+  const catSums = {};
+  currDesp.forEach(t => { catSums[t.category] = (catSums[t.category] || 0) + t.value; });
+  const total = Object.values(catSums).reduce((s, v) => s + v, 0);
+
+  const descAgg = {};
+  currDesp.forEach(t => {
+    const k = `${t.category}|||${t.description}`;
+    descAgg[k] = (descAgg[k] || 0) + t.value;
+  });
+  const descEntries = Object.entries(descAgg).map(([k, v]) => { const [cat, desc] = k.split('|||'); return { cat, desc, val: v }; });
+
+  const ids     = ['__root__', ...cats, ...descEntries.map(e => `${e.cat}|||${e.desc}`)];
+  const labels  = ['Despesas',  ...cats, ...descEntries.map(e => e.desc)];
+  const parents = ['',          ...cats.map(() => '__root__'), ...descEntries.map(e => e.cat)];
+  const values  = [total,       ...cats.map(c => catSums[c]),  ...descEntries.map(e => e.val)];
+  const colors  = ['#C8622A',   ...cats.map(c => colorMap[c]), ...descEntries.map(e => colorMap[e.cat])];
+
+  Plotly.newPlot('chart-sunburst', [{
+    type: 'sunburst',
+    ids, labels, parents, values,
+    branchvalues: 'total',
+    marker: { colors, line: { width: 2, color: '#fff' } },
+    textinfo: 'label+percent parent',
+    hovertemplate: '<b>%{label}</b><br>R$ %{value:,.2f}<br>%{percentParent:.1%}<extra></extra>',
+    leaf: { opacity: 0.85 },
+    insidetextfont: { color: '#fff', size: 10, family: 'DM Sans, sans-serif' },
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 0, r: 0, b: 0, l: 0 },
+    showlegend: false,
+  }, PLOTLY_CONFIG);
+}
+
+function drawDrillChart(currDesp) {
+  _drillData = currDesp;
+  const bc = document.getElementById('drill-breadcrumb');
+  if (bc) bc.style.display = 'none';
+
+  const cats = [...new Set(currDesp.map(t => t.category))];
+  const colorMap = _catColors(cats);
+  const catSums = {};
+  currDesp.forEach(t => { catSums[t.category] = (catSums[t.category] || 0) + t.value; });
+  const sorted = Object.entries(catSums).sort((a, b) => a[1] - b[1]);
+
+  if (!sorted.length) {
+    document.getElementById('chart-drill').innerHTML = '<div class="empty" style="padding:60px 0">Sem despesas no período.</div>';
+    return;
+  }
+
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    showlegend: false,
+    margin: { t: 10, r: 75, b: 20, l: 95 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, tickprefix: 'R$', tickformat: ',.0f' },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, tickprefix: '', automargin: true },
+    annotations: [{ text: '← clique para ver as descrições', showarrow: false, x: 1, y: -0.06, xref: 'paper', yref: 'paper', xanchor: 'right', font: { size: 10, color: '#A09590' } }],
+  };
+
+  Plotly.newPlot('chart-drill', [{
+    type: 'bar', orientation: 'h',
+    x: sorted.map(([, v]) => v),
+    y: sorted.map(([c]) => c),
+    marker: { color: sorted.map(([c]) => colorMap[c] || '#C8622A') },
+    text: sorted.map(([, v]) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`),
+    textposition: 'outside',
+    textfont: { size: 10, color: '#6B5F58' },
+    hovertemplate: '<b>%{y}</b><br>R$ %{x:,.2f}<extra></extra>',
+  }], layout, PLOTLY_CONFIG);
+
+  document.getElementById('chart-drill').on('plotly_click', d => {
+    _drawDrillDesc(d.points[0].y);
+  });
+}
+
+function _drawDrillDesc(cat) {
+  const bc = document.getElementById('drill-breadcrumb');
+  const nameEl = document.getElementById('drill-cat-name');
+  if (bc) { bc.style.display = 'flex'; }
+  if (nameEl) nameEl.textContent = cat;
+
+  const back = document.getElementById('drill-back');
+  if (back) back.onclick = () => drawDrillChart(_drillData);
+
+  const descAgg = {};
+  _drillData.filter(t => t.category === cat).forEach(t => {
+    descAgg[t.description] = (descAgg[t.description] || 0) + t.value;
+  });
+  const sorted = Object.entries(descAgg).sort((a, b) => a[1] - b[1]);
+
+  const cats = [...new Set(_drillData.map(t => t.category))];
+  const colorMap = _catColors(cats);
+  const base = colorMap[cat] || '#C8622A';
+  const hex = base.replace('#', '');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b2 = parseInt(hex.slice(4,6),16);
+
+  Plotly.newPlot('chart-drill', [{
+    type: 'bar', orientation: 'h',
+    x: sorted.map(([, v]) => v),
+    y: sorted.map(([d]) => d),
+    marker: { color: sorted.map((_, i) => `rgba(${r},${g},${b2},${0.35 + 0.65 * (i / (sorted.length - 1 || 1))})`) },
+    text: sorted.map(([, v]) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`),
+    textposition: 'outside',
+    textfont: { size: 10, color: '#6B5F58' },
+    hovertemplate: '<b>%{y}</b><br>R$ %{x:,.2f}<extra></extra>',
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    showlegend: false,
+    margin: { t: 10, r: 75, b: 20, l: 120 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, tickprefix: 'R$', tickformat: ',.0f' },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, tickprefix: '', automargin: true },
+  }, PLOTLY_CONFIG);
+
+  document.getElementById('chart-drill').on('plotly_click', d => {
+    const desc = d.points[0].y;
+    showChartModal(`${cat} — ${desc}`, _drillData.filter(t => t.category === cat && t.description === desc));
+  });
 }
 
 function drawTrendChart() {
@@ -1375,6 +1729,18 @@ function drawTrendChart() {
   };
 
   Plotly.newPlot('chart-trend', traces, layout, PLOTLY_CONFIG);
+  document.getElementById('chart-trend').on('plotly_click', function(data) {
+    const label = data.points[0].x;
+    const MONTHS_MAP = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const [mStr, yStr] = label.split('/');
+    const mIdx = MONTHS_MAP.indexOf(mStr);
+    const key = `20${yStr}-${String(mIdx).padStart(2,'0')}`;
+    const matchTxns = allTxns.filter(isNotFuture).filter(isEfetivado).filter(t => {
+      const [,m,y] = (t.date||'').split('/');
+      return `${y}-${m.padStart(2,'0')}` === key;
+    });
+    showChartModal(`Lançamentos de ${label}`, matchTxns);
+  });
 }
 
 
@@ -1419,6 +1785,121 @@ function switchTab(name) {
   if (name === 'resumo') renderResumo();
   if (name === 'parcelado') renderPurchasesList();
   if (name === 'analise') setTimeout(renderAnalise, 50);
+}
+
+// =================== EDIT / DELETE TRANSACTION ===================
+let editingTxnIdx = -1;
+
+function openEditModal(idx) {
+  const t = allTxns[idx];
+  if (!t) return;
+  editingTxnIdx = idx;
+  const [d,m,y] = (t.date||'').split('/');
+  document.getElementById('edit-date').value = `${y}-${m}-${d}`;
+  document.getElementById('edit-value').value = t.value;
+  document.getElementById('edit-desc').value = t.description||'';
+  document.getElementById('edit-type').value = t.type||'despesa';
+  document.getElementById('edit-status').value = normalizeStatus(t.status);
+  populateCatSelect('edit-cat', t.type||'despesa');
+  document.getElementById('edit-cat').value = t.category||'';
+  const srcEl = document.getElementById('edit-source');
+  srcEl.innerHTML = SOURCES.map(s => `<option value="${s}">${s}</option>`).join('');
+  srcEl.value = t.source||'';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function onEditTypeChange() {
+  populateCatSelect('edit-cat', document.getElementById('edit-type').value);
+}
+
+function closeEditModal() {
+  editingTxnIdx = -1;
+  document.getElementById('edit-modal').classList.remove('open');
+}
+
+async function saveEditTxn() {
+  const date = document.getElementById('edit-date').value;
+  const value = parseFloat(document.getElementById('edit-value').value);
+  const desc = document.getElementById('edit-desc').value.trim();
+  const cat = document.getElementById('edit-cat').value;
+  const type = document.getElementById('edit-type').value;
+  const source = document.getElementById('edit-source').value;
+  const status = document.getElementById('edit-status').value;
+  if (!date || !value || !desc || !cat) { showToast('Preencha todos os campos obrigatórios.', 'error'); return; }
+  if (editingTxnIdx < 0) return;
+  const [y,m,d] = date.split('-');
+  const original = allTxns[editingTxnIdx];
+  // Se era legacy, promove para não-legacy com novo ID para persistir
+  const newId = original.id || `txn_${Date.now()}`;
+  allTxns[editingTxnIdx] = { ...original, id: newId, legacy: false, date: `${d}/${m}/${y}`, description: desc, category: cat, value, type, source, status };
+  try {
+    await saveTransactions(allTxns);
+  } catch(e) {
+    allTxns[editingTxnIdx] = original;
+    showToast('Erro ao salvar. Tente novamente.', 'error');
+    return;
+  }
+  closeEditModal();
+  updateHeader();
+  renderHistory();
+  renderResumo();
+  showToast('Lançamento atualizado!', 'success');
+}
+
+async function deleteTxn(idx) {
+  if (!confirm('Excluir este lançamento? Esta ação não pode ser desfeita.')) return;
+  if (idx < 0 || idx >= allTxns.length) return;
+  const removed = allTxns.splice(idx, 1)[0];
+  try {
+    await saveTransactions(allTxns);
+  } catch(e) {
+    allTxns.splice(idx, 0, removed);
+    showToast('Erro ao excluir. Tente novamente.', 'error');
+    return;
+  }
+  updateHeader();
+  renderHistory();
+  renderResumo();
+  showToast('Lançamento excluído.', 'success');
+}
+
+// =================== CHART DETAIL MODAL ===================
+function showChartModal(title, txns) {
+  document.getElementById('chart-modal-title').textContent = title;
+  if (!txns.length) {
+    document.getElementById('chart-modal-body').innerHTML = '<div class="empty"><div class="empty-icon">&#x1F4EB;</div>Nenhum lançamento encontrado.</div>';
+  } else {
+    const sorted = [...txns].sort((a,b) => parseDate(b.date) - parseDate(a.date));
+    const total = txns.reduce((s,t) => s + (t.type === 'receita' ? t.value : -t.value), 0);
+    const S = 'padding:8px 10px;border-bottom:1px solid var(--border)';
+    const rows = sorted.map(t => `<tr>
+      <td style="${S};white-space:nowrap">${t.date||''}</td>
+      <td style="${S}">${esc(t.description||'')}</td>
+      <td style="${S};font-size:12px;color:var(--text-2)">${t.category||''}</td>
+      <td style="${S};text-align:right" class="${t.type==='receita'?'val-pos':'val-neg'}">${t.type==='receita'?'+':'-'}${fmtCurrency(t.value)}</td>
+    </tr>`).join('');
+    const TH = 'padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)';
+    document.getElementById('chart-modal-body').innerHTML = `
+      <div class="table-wrap">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>
+            <th style="${TH}">Data</th>
+            <th style="${TH}">Descrição</th>
+            <th style="${TH}">Categoria</th>
+            <th style="${TH};text-align:right">Valor</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;text-align:right;font-size:13px;font-weight:600;color:var(--text-2)">
+        ${txns.length} lançamento(s) &nbsp;&middot;&nbsp; Total: <span class="${total>=0?'val-pos':'val-neg'}">${total>=0?'+':''}${fmtCurrency(Math.abs(total))}</span>
+      </div>`;
+  }
+  document.getElementById('chart-modal').classList.add('open');
+}
+
+function closeChartModal() {
+  document.getElementById('chart-modal').classList.remove('open');
 }
 
 // Boot
