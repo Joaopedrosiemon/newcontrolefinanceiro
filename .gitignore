@@ -1,0 +1,6 @@
+.local-server.js
+.server-out.log
+.server-err.log
+
+# Exported local data
+controle-financeiro-*.csv
