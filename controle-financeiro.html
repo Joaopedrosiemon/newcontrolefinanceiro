@@ -120,18 +120,33 @@ tr:hover td{background:#FAFAF8;}
 .chart-fullscreen-modal{position:fixed;inset:0;background:rgba(26,22,20,.42);z-index:2000;display:none;padding:28px;}
 .chart-fullscreen-modal.show{display:flex;}
 .chart-fullscreen-shell{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.18);width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
-.chart-fullscreen-head{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);}
+.chart-fullscreen-head{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 18px;border-bottom:1px solid var(--border);}
+.chart-fullscreen-head-main{display:flex;align-items:center;gap:18px;min-width:0;flex:1;flex-wrap:wrap;}
 .chart-fullscreen-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:500;color:var(--text);}
+.chart-fullscreen-periods{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.chart-fullscreen-periods:empty{display:none;}
+.chart-fullscreen-periods .chip-btn{font-size:12px;padding:5px 10px;}
 .chart-fullscreen-close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text-2);font-size:22px;line-height:1;cursor:pointer;}
 .chart-fullscreen-close:hover{border-color:var(--accent);color:var(--accent);}
 .chart-fullscreen-body{flex:1;min-height:0;padding:18px 22px 22px;}
 .chart-fullscreen-body .plotly-graph-div{width:100%!important;height:100%!important;}
+.metric-card.metric-clickable{cursor:pointer;transition:transform .15s, box-shadow .15s, border-color .15s;}
+.metric-card.metric-clickable:hover{transform:translateY(-1px);border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.08);}
+.fullscreen-kpi-wrap{height:100%;display:flex;align-items:center;justify-content:center;}
+.fullscreen-kpi-card{width:min(560px,100%);border:1px solid var(--border);border-radius:18px;background:var(--bg);padding:34px;text-align:center;}
+.fullscreen-kpi-label{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:10px;}
+.fullscreen-kpi-value{font-size:46px;line-height:1.05;font-weight:700;margin-bottom:12px;}
+.fullscreen-kpi-note{font-size:13px;color:var(--text-2);}
 body.chart-fullscreen-open{overflow:hidden;}
 @media (max-width:700px){
   .chart-fullscreen-modal{padding:10px;}
   .chart-fullscreen-shell{border-radius:10px;}
-  .chart-fullscreen-head{height:50px;padding:0 12px;}
+  .chart-fullscreen-head{align-items:flex-start;padding:10px 12px;}
+  .chart-fullscreen-head-main{gap:8px;}
+  .chart-fullscreen-periods{width:100%;}
   .chart-fullscreen-body{padding:10px 10px 14px;}
+  .fullscreen-kpi-card{padding:24px 16px;}
+  .fullscreen-kpi-value{font-size:34px;}
 }
 
 /* CATEGORY BARS */
@@ -455,13 +470,13 @@ body.chart-fullscreen-open{overflow:hidden;}
 
   <!-- PERIOD SELECTOR -->
   <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-    <button class="chip-btn" id="period-current-week" onclick="setAnalysisPeriod('currentWeek',this)">Semana atual</button>
-    <button class="chip-btn" id="period-previous-week" onclick="setAnalysisPeriod('previousWeek',this)">Semana anterior</button>
-    <button class="chip-btn" id="period-current-month" onclick="setAnalysisPeriod('currentMonth',this)">Mês atual</button>
-    <button class="chip-btn" id="period-previous-month" onclick="setAnalysisPeriod('previousMonth',this)">Mês anterior</button>
-    <button class="chip-btn chip-active" id="period-last7" onclick="setAnalysisPeriod('last7',this)">Últimos 7 dias</button>
-    <button class="chip-btn" id="period-last15" onclick="setAnalysisPeriod('last15',this)">15 dias</button>
-    <button class="chip-btn" id="period-last30" onclick="setAnalysisPeriod('last30',this)">30 dias</button>
+    <button class="chip-btn" id="period-current-week" data-analysis-period="currentWeek" onclick="setAnalysisPeriod('currentWeek',this)">Semana atual</button>
+    <button class="chip-btn" id="period-previous-week" data-analysis-period="previousWeek" onclick="setAnalysisPeriod('previousWeek',this)">Semana anterior</button>
+    <button class="chip-btn" id="period-current-month" data-analysis-period="currentMonth" onclick="setAnalysisPeriod('currentMonth',this)">Mês atual</button>
+    <button class="chip-btn" id="period-previous-month" data-analysis-period="previousMonth" onclick="setAnalysisPeriod('previousMonth',this)">Mês anterior</button>
+    <button class="chip-btn chip-active" id="period-last7" data-analysis-period="last7" onclick="setAnalysisPeriod('last7',this)">Últimos 7 dias</button>
+    <button class="chip-btn" id="period-last15" data-analysis-period="last15" onclick="setAnalysisPeriod('last15',this)">15 dias</button>
+    <button class="chip-btn" id="period-last30" data-analysis-period="last30" onclick="setAnalysisPeriod('last30',this)">30 dias</button>
   </div>
   <div id="analise-period-label" style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Analisando —</div>
 
@@ -516,7 +531,10 @@ body.chart-fullscreen-open{overflow:hidden;}
 <div class="chart-fullscreen-modal" id="chart-fullscreen-modal" onclick="closeChartFullscreen(event)">
   <div class="chart-fullscreen-shell" onclick="event.stopPropagation()">
     <div class="chart-fullscreen-head">
-      <div class="chart-fullscreen-title" id="chart-fullscreen-title">Gráfico</div>
+      <div class="chart-fullscreen-head-main">
+        <div class="chart-fullscreen-title" id="chart-fullscreen-title">Gráfico</div>
+        <div class="chart-fullscreen-periods" id="chart-fullscreen-periods"></div>
+      </div>
       <button class="chart-fullscreen-close" onclick="closeChartFullscreen()" aria-label="Fechar tela cheia">&times;</button>
     </div>
     <div class="chart-fullscreen-body" id="chart-fullscreen-body"></div>
@@ -1171,12 +1189,35 @@ async function importCSV(input) {
 
 // =================== ANÁLISE ===================
 let analysisPeriodMode = 'last7';
+const ANALYSIS_PERIOD_OPTIONS = [
+  { mode: 'currentWeek', label: 'Semana atual' },
+  { mode: 'previousWeek', label: 'Semana anterior' },
+  { mode: 'currentMonth', label: 'Mês atual' },
+  { mode: 'previousMonth', label: 'Mês anterior' },
+  { mode: 'last7', label: 'Últimos 7 dias' },
+  { mode: 'last15', label: '15 dias' },
+  { mode: 'last30', label: '30 dias' },
+];
 
 function setAnalysisPeriod(mode, btn) {
   analysisPeriodMode = mode;
-  document.querySelectorAll('[id^="period-"]').forEach(b => b.classList.remove('chip-active'));
-  if (btn) btn.classList.add('chip-active');
+  syncAnalysisPeriodButtons();
   renderAnalise();
+  if (isChartFullscreenOpen()) {
+    setTimeout(refreshChartFullscreenContent, 80);
+  }
+}
+
+function syncAnalysisPeriodButtons() {
+  document.querySelectorAll('[data-analysis-period]').forEach(b => {
+    b.classList.toggle('chip-active', b.dataset.analysisPeriod === analysisPeriodMode);
+  });
+}
+
+function analysisPeriodButtonsHtml() {
+  return ANALYSIS_PERIOD_OPTIONS.map(opt => `
+    <button class="chip-btn ${opt.mode === analysisPeriodMode ? 'chip-active' : ''}" data-analysis-period="${opt.mode}" onclick="setAnalysisPeriod('${opt.mode}',this)">${opt.label}</button>
+  `).join('');
 }
 
 function setPeriod(days, btn) {
@@ -1256,21 +1297,8 @@ function getAnalysisPeriodRange() {
   return { periodStart, periodEnd, prevStart, prevEnd, days };
 }
 
-function isNotFuture(t) {
-  const d = parseDate(t.date);
-  return d.getTime() === 0 || startOfDay(d) <= startOfDay(new Date());
-}
-
-function noAjuste(t) { return t.category !== 'Ajuste'; }
-function isEfetivado(t) {
-  const s = (t.status||'').toLowerCase();
-  return s === 'efetivado' || s === 'liquidado' || s === 'efetivada';
-}
-function validTxn(t) { return noAjuste(t) && isNotFuture(t) && isEfetivado(t); }
-
-function renderAnalise() {
+function getAnalysisStats() {
   const { periodStart, periodEnd, prevStart, prevEnd, days } = getAnalysisPeriodRange();
-
   const curr = allTxns.filter(t => { const d = parseDate(t.date); return d >= periodStart && d <= periodEnd; }).filter(validTxn);
   const prev = allTxns.filter(t => { const d = parseDate(t.date); return d >= prevStart && d <= prevEnd; }).filter(validTxn);
 
@@ -1285,14 +1313,32 @@ function renderAnalise() {
   const diffPct   = prevTotalDesp > 0 ? ((totalDesp - prevTotalDesp) / prevTotalDesp * 100) : 0;
   const diffSign  = diffPct >= 0 ? '↑' : '↓';
   const diffColor = diffPct >= 0 ? 'var(--red)' : 'var(--green)';
+
+  return { periodStart, periodEnd, prevStart, prevEnd, days, curr, prev, currDesp, prevDesp, currRec, totalDesp, prevTotalDesp, totalRec, avgDaily, diffPct, diffSign, diffColor };
+}
+
+function isNotFuture(t) {
+  const d = parseDate(t.date);
+  return d.getTime() === 0 || startOfDay(d) <= startOfDay(new Date());
+}
+
+function noAjuste(t) { return t.category !== 'Ajuste'; }
+function isEfetivado(t) {
+  const s = (t.status||'').toLowerCase();
+  return s === 'efetivado' || s === 'liquidado' || s === 'efetivada';
+}
+function validTxn(t) { return noAjuste(t) && isNotFuture(t) && isEfetivado(t); }
+
+function renderAnalise() {
+  const { periodStart, periodEnd, days, currDesp, prevDesp, totalDesp, totalRec, avgDaily, diffPct, diffSign, diffColor } = getAnalysisStats();
   const periodLabel = document.getElementById('analise-period-label');
   if (periodLabel) periodLabel.textContent = `Analisando ${fmtDate(periodStart)} a ${fmtDate(periodEnd)}`;
 
   document.getElementById('analise-kpis').innerHTML = `
-    <div class="metric-card"><div class="mc-label">Despesas</div><div class="mc-val" style="color:var(--red)">${fmtCurrency(totalDesp)}</div></div>
-    <div class="metric-card"><div class="mc-label">Receitas</div><div class="mc-val" style="color:var(--green)">${fmtCurrency(totalRec)}</div></div>
-    <div class="metric-card"><div class="mc-label">Média/dia</div><div class="mc-val">${fmtCurrency(avgDaily)}</div></div>
-    <div class="metric-card"><div class="mc-label">vs período anterior</div><div class="mc-val" style="color:${diffColor}">${diffSign} ${Math.abs(diffPct).toFixed(0)}%</div></div>`;
+    <div class="metric-card metric-clickable" role="button" tabindex="0" onclick="openKpiFullscreen('expenses')" onkeydown="handleKpiKeydown(event,'expenses')"><div class="mc-label">Despesas</div><div class="mc-val" style="color:var(--red)">${fmtCurrency(totalDesp)}</div></div>
+    <div class="metric-card metric-clickable" role="button" tabindex="0" onclick="openKpiFullscreen('income')" onkeydown="handleKpiKeydown(event,'income')"><div class="mc-label">Receitas</div><div class="mc-val" style="color:var(--green)">${fmtCurrency(totalRec)}</div></div>
+    <div class="metric-card metric-clickable" role="button" tabindex="0" onclick="openKpiFullscreen('dailyAvg')" onkeydown="handleKpiKeydown(event,'dailyAvg')"><div class="mc-label">Média/dia</div><div class="mc-val">${fmtCurrency(avgDaily)}</div></div>
+    <div class="metric-card metric-clickable" role="button" tabindex="0" onclick="openKpiFullscreen('previousDiff')" onkeydown="handleKpiKeydown(event,'previousDiff')"><div class="mc-label">vs período anterior</div><div class="mc-val" style="color:${diffColor}">${diffSign} ${Math.abs(diffPct).toFixed(0)}%</div></div>`;
 
   drawDailyChart(periodStart, days, allTxns.filter(validTxn));
   drawCompareChart(currDesp, prevDesp);
@@ -1318,6 +1364,7 @@ const PLOTLY_FULLSCREEN_ICON = {
   path: 'M5 5h6v2H7v4H5V5zm8 0h6v6h-2V7h-4V5zM5 13h2v4h4v2H5v-6zm12 0h2v6h-6v-2h4v-4z'
 };
 let plotlyFullscreenSource = null;
+let fullscreenContext = null;
 const PLOTLY_CONFIG = {
   displayModeBar: true,
   displaylogo: false,
@@ -1337,17 +1384,32 @@ const PLOTLY_MODAL_CONFIG = { ...PLOTLY_CONFIG, modeBarButtonsToAdd: [] };
 function getChartTitle(gd) {
   return gd.closest('.card')?.querySelector('.card-title')?.textContent?.trim() || 'Gráfico';
 }
-function openChartFullscreen(gd) {
+function isChartFullscreenOpen() {
+  return document.getElementById('chart-fullscreen-modal')?.classList.contains('show');
+}
+function setupFullscreenFrame(titleText) {
   const modal = document.getElementById('chart-fullscreen-modal');
   const body = document.getElementById('chart-fullscreen-body');
   const title = document.getElementById('chart-fullscreen-title');
-  if (!modal || !body || !gd?.data || !gd?.layout) return;
+  const periods = document.getElementById('chart-fullscreen-periods');
+  if (!modal || !body || !title || !periods) return null;
 
-  plotlyFullscreenSource = gd;
-  title.textContent = getChartTitle(gd);
-  body.innerHTML = '<div id="chart-fullscreen-plot" style="width:100%;height:100%;"></div>';
+  title.textContent = titleText;
+  periods.innerHTML = analysisPeriodButtonsHtml();
+  syncAnalysisPeriodButtons();
   modal.classList.add('show');
   document.body.classList.add('chart-fullscreen-open');
+  return { modal, body, title, periods };
+}
+function renderFullscreenChart(gd) {
+  const frame = setupFullscreenFrame(getChartTitle(gd));
+  if (!frame || !gd?.data || !gd?.layout) return;
+  const { body } = frame;
+  const previousPlot = document.getElementById('chart-fullscreen-plot');
+  if (previousPlot) Plotly.purge(previousPlot);
+
+  plotlyFullscreenSource = gd;
+  body.innerHTML = '<div id="chart-fullscreen-plot" style="width:100%;height:100%;"></div>';
 
   const layout = {
     ...gd.layout,
@@ -1360,12 +1422,104 @@ function openChartFullscreen(gd) {
   };
   Plotly.newPlot('chart-fullscreen-plot', gd.data, layout, PLOTLY_MODAL_CONFIG).then((plot) => {
     setTimeout(() => Plotly.Plots.resize(plot), 60);
+    if (gd.id === 'chart-drill') {
+      plot.on('plotly_click', (ev) => {
+        const pt = ev.points && ev.points[0];
+        if (!pt) return;
+        const bc = document.getElementById('drill-breadcrumb');
+        const inDescView = bc && bc.style.display === 'flex';
+        if (!inDescView) {
+          _drawDrillDesc(pt.y);
+          const mainGd = document.getElementById('chart-drill');
+          if (mainGd && mainGd.data && mainGd.layout) renderFullscreenChart(mainGd);
+        } else {
+          const cat = (document.getElementById('drill-cat-name') || {}).textContent || '';
+          const desc = pt.y;
+          showChartModal(`${cat} — ${desc}`, _drillData.filter(t => t.category === cat && _descriptionGroupLabel(t.description) === desc));
+        }
+      });
+    }
   });
+}
+function openChartFullscreen(gd) {
+  if (!gd?.id) return;
+  fullscreenContext = { type: 'chart', chartId: gd.id };
+  renderFullscreenChart(gd);
+}
+function getKpiFullscreenData(metric) {
+  const stats = getAnalysisStats();
+  const periodText = `${fmtDate(stats.periodStart)} a ${fmtDate(stats.periodEnd)}`;
+  const map = {
+    expenses: {
+      title: 'Despesas',
+      label: 'Despesas no período',
+      value: fmtCurrency(stats.totalDesp),
+      color: 'var(--red)',
+      note: `${stats.currDesp.length} lançamento(s) de despesa entre ${periodText}.`,
+    },
+    income: {
+      title: 'Receitas',
+      label: 'Receitas no período',
+      value: fmtCurrency(stats.totalRec),
+      color: 'var(--green)',
+      note: `${stats.currRec.length} lançamento(s) de receita entre ${periodText}.`,
+    },
+    dailyAvg: {
+      title: 'Média por dia',
+      label: 'Média diária de despesas',
+      value: fmtCurrency(stats.avgDaily),
+      color: 'var(--text)',
+      note: `Calculada em ${stats.days} dia(s), de ${periodText}.`,
+    },
+    previousDiff: {
+      title: 'Vs período anterior',
+      label: 'Variação das despesas',
+      value: `${stats.diffSign} ${Math.abs(stats.diffPct).toFixed(0)}%`,
+      color: stats.diffColor,
+      note: `Atual: ${fmtCurrency(stats.totalDesp)} · anterior: ${fmtCurrency(stats.prevTotalDesp)}.`,
+    },
+  };
+  return map[metric] || map.expenses;
+}
+function renderKpiFullscreen(metric) {
+  const data = getKpiFullscreenData(metric);
+  const frame = setupFullscreenFrame(data.title);
+  if (!frame) return;
+  const previousPlot = document.getElementById('chart-fullscreen-plot');
+  if (previousPlot) Plotly.purge(previousPlot);
+  plotlyFullscreenSource = null;
+  frame.body.innerHTML = `
+    <div class="fullscreen-kpi-wrap">
+      <div class="fullscreen-kpi-card">
+        <div class="fullscreen-kpi-label">${data.label}</div>
+        <div class="fullscreen-kpi-value" style="color:${data.color}">${data.value}</div>
+        <div class="fullscreen-kpi-note">${data.note}</div>
+      </div>
+    </div>`;
+}
+function openKpiFullscreen(metric) {
+  fullscreenContext = { type: 'kpi', metric };
+  renderKpiFullscreen(metric);
+}
+function handleKpiKeydown(event, metric) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openKpiFullscreen(metric);
+}
+function refreshChartFullscreenContent() {
+  if (!fullscreenContext) return;
+  if (fullscreenContext.type === 'chart') {
+    const gd = document.getElementById(fullscreenContext.chartId);
+    if (gd?.data && gd?.layout) renderFullscreenChart(gd);
+  } else if (fullscreenContext.type === 'kpi') {
+    renderKpiFullscreen(fullscreenContext.metric);
+  }
 }
 function closeChartFullscreen(event) {
   if (event && event.target !== event.currentTarget) return;
   const modal = document.getElementById('chart-fullscreen-modal');
   const body = document.getElementById('chart-fullscreen-body');
+  const periods = document.getElementById('chart-fullscreen-periods');
   modal?.classList.remove('show');
   document.body.classList.remove('chart-fullscreen-open');
   if (body) {
@@ -1373,8 +1527,10 @@ function closeChartFullscreen(event) {
     if (plot) Plotly.purge(plot);
     body.innerHTML = '';
   }
+  if (periods) periods.innerHTML = '';
   if (plotlyFullscreenSource) setTimeout(() => Plotly.Plots.resize(plotlyFullscreenSource), 60);
   plotlyFullscreenSource = null;
+  fullscreenContext = null;
 }
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.getElementById('chart-fullscreen-modal')?.classList.contains('show')) {
@@ -1511,6 +1667,11 @@ function _catColors(cats) {
   return map;
 }
 
+function _descriptionGroupLabel(description) {
+  const [main] = String(description || '').split('|');
+  return main.trim() || 'Sem descrição';
+}
+
 function drawSunburstChart(currDesp) {
   if (!currDesp.length) {
     document.getElementById('chart-sunburst').innerHTML = '<div class="empty" style="padding:60px 0">Sem despesas no período.</div>';
@@ -1525,7 +1686,7 @@ function drawSunburstChart(currDesp) {
 
   const descAgg = {};
   currDesp.forEach(t => {
-    const k = `${t.category}|||${t.description}`;
+    const k = `${t.category}|||${_descriptionGroupLabel(t.description)}`;
     descAgg[k] = (descAgg[k] || 0) + t.value;
   });
   const descEntries = Object.entries(descAgg).map(([k, v]) => { const [cat, desc] = k.split('|||'); return { cat, desc, val: v }; });
@@ -1604,7 +1765,8 @@ function _drawDrillDesc(cat) {
 
   const descAgg = {};
   _drillData.filter(t => t.category === cat).forEach(t => {
-    descAgg[t.description] = (descAgg[t.description] || 0) + t.value;
+    const desc = _descriptionGroupLabel(t.description);
+    descAgg[desc] = (descAgg[desc] || 0) + t.value;
   });
   const sorted = Object.entries(descAgg).sort((a, b) => a[1] - b[1]);
 
@@ -1633,7 +1795,7 @@ function _drawDrillDesc(cat) {
 
   document.getElementById('chart-drill').on('plotly_click', d => {
     const desc = d.points[0].y;
-    showChartModal(`${cat} — ${desc}`, _drillData.filter(t => t.category === cat && t.description === desc));
+    showChartModal(`${cat} — ${desc}`, _drillData.filter(t => t.category === cat && _descriptionGroupLabel(t.description) === desc));
   });
 }
 
