@@ -67,6 +67,14 @@ input,select,textarea{
 input:focus,select:focus{border-color:var(--accent);}
 select{cursor:pointer;}
 
+/* DATE STEPPER (botão rápido de datas: -1/+1 dia) */
+.date-stepper{display:flex;align-items:stretch;gap:4px;}
+.date-stepper input[type="date"]{flex:1;min-width:0;}
+.date-step-group{flex:0 0 auto;display:flex;gap:4px;}
+.date-step-btn{flex:0 0 auto;width:30px;border:1px solid var(--border);background:var(--card);border-radius:8px;cursor:pointer;font-size:16px;line-height:1;color:var(--text-2);display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.date-step-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
+.date-step-btn:active{transform:scale(0.95);}
+
 /* TOGGLE TYPE */
 .type-toggle{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
 .type-btn{flex:1;padding:9px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--text-2);}
@@ -127,8 +135,11 @@ tr:hover td{background:#FAFAF8;}
 .chart-fullscreen-periods .chip-btn{font-size:12px;padding:5px 10px;}
 .chart-fullscreen-close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text-2);font-size:22px;line-height:1;cursor:pointer;}
 .chart-fullscreen-close:hover{border-color:var(--accent);color:var(--accent);}
-.chart-fullscreen-body{flex:1;min-height:0;padding:18px 22px 22px;}
+.chart-fullscreen-body{flex:1;min-height:0;padding:18px 22px 22px;display:flex;flex-direction:column;}
 .chart-fullscreen-body .plotly-graph-div{width:100%!important;height:100%!important;}
+.chart-fullscreen-breadcrumb{display:none;font-size:12px;color:var(--text-3);margin-bottom:10px;align-items:center;gap:4px;flex:0 0 auto;}
+.chart-fullscreen-breadcrumb.show{display:flex;}
+.chart-fullscreen-breadcrumb .drill-back-link{color:var(--accent);cursor:pointer;font-weight:500;}
 .metric-card.metric-clickable{cursor:pointer;transition:transform .15s, box-shadow .15s, border-color .15s;}
 .metric-card.metric-clickable:hover{transform:translateY(-1px);border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.08);}
 .fullscreen-kpi-wrap{height:100%;display:flex;align-items:center;justify-content:center;}
@@ -202,6 +213,7 @@ body.chart-fullscreen-open{overflow:hidden;}
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
+#chart-modal{z-index:2100;}
 .modal-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:520px;width:90%;max-height:82vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18);}
 .modal-box.wide{max-width:660px;}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
@@ -370,7 +382,13 @@ body.chart-fullscreen-open{overflow:hidden;}
     <div class="form-grid cols3">
       <div class="field">
         <label>Data</label>
-        <input type="date" id="txn-date"/>
+        <div class="date-stepper">
+          <input type="date" id="txn-date"/>
+          <div class="date-step-group">
+            <button type="button" class="date-step-btn" onclick="stepDate('txn-date',-1)" title="Dia anterior">−</button>
+            <button type="button" class="date-step-btn" onclick="stepDate('txn-date',1)" title="Dia seguinte">+</button>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Valor (R$)</label>
@@ -411,7 +429,13 @@ body.chart-fullscreen-open{overflow:hidden;}
       </div>
       <div class="field">
         <label>Data da primeira parcela</label>
-        <input type="date" id="prc-date" oninput="updatePreview()"/>
+        <div class="date-stepper">
+          <input type="date" id="prc-date" oninput="updatePreview()"/>
+          <div class="date-step-group">
+            <button type="button" class="date-step-btn" onclick="stepDate('prc-date',-1)" title="Dia anterior">−</button>
+            <button type="button" class="date-step-btn" onclick="stepDate('prc-date',1)" title="Dia seguinte">+</button>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Valor total (R$)</label>
@@ -702,7 +726,13 @@ body.chart-fullscreen-open{overflow:hidden;}
     <div class="form-grid cols3" style="margin-bottom:12px;">
       <div class="field">
         <label>Data</label>
-        <input type="date" id="edit-date"/>
+        <div class="date-stepper">
+          <input type="date" id="edit-date"/>
+          <div class="date-step-group">
+            <button type="button" class="date-step-btn" onclick="stepDate('edit-date',-1)" title="Dia anterior">−</button>
+            <button type="button" class="date-step-btn" onclick="stepDate('edit-date',1)" title="Dia seguinte">+</button>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Valor (R$)</label>
@@ -1498,7 +1528,28 @@ function renderFullscreenChart(gd) {
   if (previousPlot) Plotly.purge(previousPlot);
 
   plotlyFullscreenSource = gd;
-  body.innerHTML = '<div id="chart-fullscreen-plot" style="width:100%;height:100%;"></div>';
+  const isDrill = gd.id === 'chart-drill';
+  const srcBc = document.getElementById('drill-breadcrumb');
+  const inDescView = !!(isDrill && srcBc && srcBc.style.display === 'flex');
+  const catName = isDrill ? (document.getElementById('drill-cat-name')?.textContent || '') : '';
+
+  body.innerHTML = isDrill
+    ? `<div class="chart-fullscreen-breadcrumb${inDescView ? ' show' : ''}" id="chart-fullscreen-breadcrumb">
+        <span class="drill-back-link" id="chart-fullscreen-drill-back">&larr; Categorias</span>
+        <span>/</span>
+        <span id="chart-fullscreen-drill-cat">${esc(catName)}</span>
+      </div>
+      <div id="chart-fullscreen-plot" style="flex:1;min-height:0;width:100%;"></div>`
+    : '<div id="chart-fullscreen-plot" style="width:100%;height:100%;"></div>';
+
+  if (isDrill) {
+    const back = document.getElementById('chart-fullscreen-drill-back');
+    if (back) back.onclick = () => {
+      drawDrillChart(_drillData);
+      const mainGd = document.getElementById('chart-drill');
+      if (mainGd?.data && mainGd?.layout) renderFullscreenChart(mainGd);
+    };
+  }
 
   const layout = {
     ...gd.layout,
@@ -1511,13 +1562,13 @@ function renderFullscreenChart(gd) {
   };
   Plotly.newPlot('chart-fullscreen-plot', gd.data, layout, PLOTLY_MODAL_CONFIG).then((plot) => {
     setTimeout(() => Plotly.Plots.resize(plot), 60);
-    if (gd.id === 'chart-drill') {
+    if (isDrill) {
       plot.on('plotly_click', (ev) => {
         const pt = ev.points && ev.points[0];
         if (!pt) return;
         const bc = document.getElementById('drill-breadcrumb');
-        const inDescView = bc && bc.style.display === 'flex';
-        if (!inDescView) {
+        const inDescView2 = bc && bc.style.display === 'flex';
+        if (!inDescView2) {
           _drawDrillDesc(pt.y);
           const mainGd = document.getElementById('chart-drill');
           if (mainGd && mainGd.data && mainGd.layout) renderFullscreenChart(mainGd);
@@ -1676,33 +1727,114 @@ function drawCompareChart(curr, prev) {
   prev.forEach(t => { prevBycat[t.category] = (prevBycat[t.category]||0) + t.value; });
 
   const allCats = [...new Set([...Object.keys(bycat), ...Object.keys(prevBycat)])];
-  const cats = allCats.sort((a,b) => (bycat[a]||0) - (bycat[b]||0)).slice(-7);
+  const cats = allCats
+    .sort((a,b) => Math.max(bycat[a]||0, prevBycat[a]||0) - Math.max(bycat[b]||0, prevBycat[b]||0))
+    .slice(-7);
+
+  if (!cats.length) {
+    document.getElementById('chart-compare').innerHTML = '<div class="empty" style="padding:60px 0">Sem despesas para comparar.</div>';
+    return;
+  }
+
+  const currVals = cats.map(c => bycat[c] || 0);
+  const prevVals = cats.map(c => prevBycat[c] || 0);
+  const maxVal = Math.max(...currVals, ...prevVals, 1);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal / 4 || 1)));
+  const rawStep = maxVal / 4;
+  const stepBase = rawStep / magnitude;
+  const niceStep = (stepBase <= 1 ? 1 : stepBase <= 2 ? 2 : stepBase <= 5 ? 5 : 10) * magnitude;
+  const axisMax = niceStep * 4;
+  const tickVals = [0, 1, 2, 3, 4].map(i => i * niceStep);
+  const tickText = tickVals.map(v => fmtCurrency(v).replace(',00',''));
+  const deltaText = cats.map((c, i) => {
+    const current = currVals[i];
+    const previous = prevVals[i];
+    if (!previous && !current) return '0%';
+    if (!previous) return 'novo';
+    const pct = ((current - previous) / previous) * 100;
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`;
+  });
+  const deltaColors = cats.map((c, i) => currVals[i] > prevVals[i] ? '#A32D2D' : currVals[i] < prevVals[i] ? '#2D6A4F' : '#6B5F58');
+  const labelX = cats.map((c, i) => Math.max(currVals[i], prevVals[i]) + axisMax * 0.03);
+  const yBase = cats.map((_, i) => i);
+  const prevY = yBase.map(y => y - 0.16);
+  const currY = yBase.map(y => y + 0.16);
+  const makeLineData = (values, yVals, categories) => {
+    const x = [], y = [], customdata = [];
+    values.forEach((value, i) => {
+      x.push(0, value, null);
+      y.push(yVals[i], yVals[i], null);
+      customdata.push(categories[i], categories[i], null);
+    });
+    return { x, y, customdata };
+  };
+  const prevLine = makeLineData(prevVals, prevY, cats);
+  const currLine = makeLineData(currVals, currY, cats);
 
   const traces = [
     {
-      name: 'Período anterior', x: cats.map(c => prevBycat[c]||0), y: cats, type: 'bar', orientation: 'h',
-      marker: { color: '#D3D1C7' },
-      hovertemplate: '<b>%{y}</b><br>Anterior: R$ %{x:,.2f}<extra></extra>',
+      name: 'Período anterior',
+      x: prevLine.x,
+      y: prevLine.y,
+      customdata: prevLine.customdata,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#C7C3B8', width: 10 },
+      hovertemplate: '<b>%{customdata}</b><br>Anterior: %{x:,.2f}<extra></extra>',
     },
     {
-      name: 'Período atual', x: cats.map(c => bycat[c]||0), y: cats, type: 'bar', orientation: 'h',
-      marker: { color: '#E24B4A', opacity: 0.9 },
-      hovertemplate: '<b>%{y}</b><br>Atual: R$ %{x:,.2f}<extra></extra>',
+      name: 'Período atual',
+      x: currLine.x,
+      y: currLine.y,
+      customdata: currLine.customdata,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#E24B4A', width: 10 },
+      hovertemplate: '<b>%{customdata}</b><br>Atual: %{x:,.2f}<extra></extra>',
+    },
+    {
+      name: 'Diferença',
+      x: labelX,
+      y: yBase,
+      text: deltaText,
+      type: 'scatter',
+      mode: 'text',
+      textposition: 'middle left',
+      textfont: { size: 11, color: deltaColors },
+      hoverinfo: 'skip',
+      showlegend: false,
     },
   ];
 
   const layout = {
     ...PLOTLY_LAYOUT_BASE,
-    barmode: 'group',
-    margin: { t: 10, r: 10, b: 40, l: 95 },
-    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, tickprefix: 'R$', tickformat: ',.0f' },
-    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, tickprefix: '', automargin: true },
+    margin: { t: 10, r: 64, b: 40, l: 105 },
+    xaxis: {
+      ...PLOTLY_LAYOUT_BASE.xaxis,
+      range: [0, axisMax * 1.14],
+      tickmode: 'array',
+      tickvals: tickVals,
+      ticktext: tickText,
+      zeroline: false,
+    },
+    yaxis: {
+      ...PLOTLY_LAYOUT_BASE.yaxis,
+      tickprefix: '',
+      tickmode: 'array',
+      tickvals: yBase,
+      ticktext: cats,
+      range: [-0.55, cats.length - 0.45],
+      automargin: true,
+      gridcolor: '#F0ECE7',
+    },
+    legend: { orientation: 'h', y: -0.2, x: 0, font: { size: 10 } },
   };
 
   Plotly.newPlot('chart-compare', traces, layout, PLOTLY_CONFIG);
   document.getElementById('chart-compare').on('plotly_click', function(data) {
     const pt = data.points[0];
-    const cat = pt.y;
+    if (!pt.data.name.includes('Período')) return;
+    const cat = pt.customdata || pt.y;
     const isPrev = pt.data.name.includes('anterior');
     const pool = isPrev ? prev : curr;
     showChartModal(`${cat} — ${pt.data.name}`, pool.filter(t => t.category === cat));
@@ -1778,7 +1910,22 @@ function drawSunburstChart(currDesp) {
     const k = `${t.category}|||${_descriptionGroupLabel(t.description)}`;
     descAgg[k] = (descAgg[k] || 0) + t.value;
   });
-  const descEntries = Object.entries(descAgg).map(([k, v]) => { const [cat, desc] = k.split('|||'); return { cat, desc, val: v }; });
+
+  const TOP_DESC_PER_CAT = 4;
+  const descByCat = {};
+  Object.entries(descAgg).forEach(([k, v]) => {
+    const [cat, desc] = k.split('|||');
+    (descByCat[cat] = descByCat[cat] || []).push({ desc, val: v });
+  });
+  const descEntries = [];
+  Object.entries(descByCat).forEach(([cat, list]) => {
+    list.sort((a, b) => b.val - a.val);
+    list.slice(0, TOP_DESC_PER_CAT).forEach(({ desc, val }) => descEntries.push({ cat, desc, val }));
+    const rest = list.slice(TOP_DESC_PER_CAT);
+    if (rest.length) {
+      descEntries.push({ cat, desc: 'Outros', val: rest.reduce((s, e) => s + e.val, 0) });
+    }
+  });
 
   const ids     = ['__root__', ...cats, ...descEntries.map(e => `${e.cat}|||${e.desc}`)];
   const labels  = ['Despesas',  ...cats, ...descEntries.map(e => e.desc)];
@@ -1792,6 +1939,7 @@ function drawSunburstChart(currDesp) {
     branchvalues: 'total',
     marker: { colors, line: { width: 2, color: '#fff' } },
     textinfo: 'label+percent parent',
+    insidetextorientation: 'radial',
     hovertemplate: '<b>%{label}</b><br>R$ %{value:,.2f}<br>%{percentParent:.1%}<extra></extra>',
     leaf: { opacity: 0.85 },
     insidetextfont: { color: '#fff', size: 10, family: 'DM Sans, sans-serif' },
@@ -1998,6 +2146,17 @@ function drawTrendChart() {
 function fmtCurrency(v) {
   return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
+function stepDate(inputId, delta) {
+  const el = document.getElementById(inputId);
+  const base = el.value ? el.value.split('-').map(Number) : (() => {
+    const t = new Date();
+    return [t.getFullYear(), t.getMonth()+1, t.getDate()];
+  })();
+  const d = new Date(base[0], base[1]-1, base[2]);
+  d.setDate(d.getDate() + delta);
+  el.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  el.dispatchEvent(new Event('input'));
+}
 function fmtDate(d) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
@@ -2121,12 +2280,16 @@ function showChartModal(title, txns) {
     const sorted = [...txns].sort((a,b) => parseDate(b.date) - parseDate(a.date));
     const total = txns.reduce((s,t) => s + (t.type === 'receita' ? t.value : -t.value), 0);
     const S = 'padding:8px 10px;border-bottom:1px solid var(--border)';
-    const rows = sorted.map(t => `<tr>
+    const rows = sorted.map(t => {
+      const tidx = allTxns.indexOf(t);
+      return `<tr>
       <td style="${S};white-space:nowrap">${t.date||''}</td>
       <td style="${S}">${esc(t.description||'')}</td>
       <td style="${S};font-size:12px;color:var(--text-2)">${t.category||''}</td>
       <td style="${S};text-align:right" class="${t.type==='receita'?'val-pos':'val-neg'}">${t.type==='receita'?'+':'-'}${fmtCurrency(t.value)}</td>
-    </tr>`).join('');
+      <td style="${S};text-align:center">${tidx>=0?`<button class="btn-action btn-edit" onclick="closeChartModal();openEditModal(${tidx})">Editar</button>`:''}</td>
+    </tr>`;
+    }).join('');
     const TH = 'padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)';
     document.getElementById('chart-modal-body').innerHTML = `
       <div class="table-wrap">
@@ -2136,6 +2299,7 @@ function showChartModal(title, txns) {
             <th style="${TH}">Descrição</th>
             <th style="${TH}">Categoria</th>
             <th style="${TH};text-align:right">Valor</th>
+            <th style="${TH};text-align:center">Ações</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
