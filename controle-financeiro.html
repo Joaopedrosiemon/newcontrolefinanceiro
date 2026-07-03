@@ -116,6 +116,32 @@ tr:hover td{background:#FAFAF8;}
 .val-pos{color:var(--green);font-weight:500;}
 .val-neg{color:var(--red);font-weight:500;}
 
+/* COLUMN FILTER POPOVER */
+.history-table th.th-click{cursor:pointer;user-select:none;white-space:nowrap;}
+.history-table th.th-click:hover{color:var(--text);background:var(--accent-light);}
+.history-table .th-ind{font-size:9px;margin-left:3px;color:var(--accent);}
+.col-popover{position:fixed;z-index:1500;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.14);min-width:220px;max-width:min(300px,calc(100vw - 16px));padding:10px;font-size:13px;text-transform:none;letter-spacing:normal;font-weight:400;color:var(--text);}
+.col-popover .cp-title{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.col-popover .cp-sort{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;}
+.col-popover .cp-sort button{background:none;border:none;text-align:left;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);font-family:inherit;}
+.col-popover .cp-sort button:hover{background:var(--accent-light);}
+.col-popover .cp-sort button.active{background:var(--accent-light);color:var(--accent-dark);font-weight:600;}
+.col-popover .cp-search{width:100%;font-size:13px;padding:6px 9px;margin-bottom:6px;box-sizing:border-box;}
+.col-popover .cp-list{max-height:220px;overflow-y:auto;margin:6px 0;}
+.col-popover .cp-list label{display:flex;gap:8px;align-items:center;padding:4px 2px;cursor:pointer;}
+.col-popover .cp-count{color:var(--text-3);font-size:11px;margin-left:auto;}
+.col-popover .cp-tree .cp-row{display:flex;align-items:center;}
+.col-popover .cp-tree .cp-row label{flex:1;}
+.col-popover .cp-toggle{cursor:pointer;display:inline-block;width:16px;text-align:center;color:var(--text-3);user-select:none;font-size:11px;}
+.col-popover .cp-children{margin-left:18px;}
+.col-popover .cp-range{display:flex;gap:8px;margin:6px 0;}
+.col-popover .cp-range input{width:100%;min-width:0;font-size:13px;padding:6px 9px;box-sizing:border-box;}
+.col-popover .cp-foot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.filter-chips:empty{display:none;}
+.filter-chip{font-size:12px;background:var(--accent-light);color:var(--accent-dark);padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;}
+.filter-chip button{background:none;border:none;color:var(--accent-dark);cursor:pointer;font-size:13px;padding:0;line-height:1;}
+
 /* PAGINATION */
 .pagination{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:13px;color:var(--text-2);}
 .pagination-btns{display:flex;gap:6px;}
@@ -305,7 +331,8 @@ body.chart-fullscreen-open{overflow:hidden;}
 .cat-hist-txn-item{display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border);}
 .cat-hist-txn-item:last-child{border-bottom:none;}
 .cat-hist-txn-desc{font-size:13px;font-weight:500;color:var(--text);}
-.cat-hist-txn-date{font-size:11px;color:var(--text-3);margin-top:2px;}
+.cat-hist-txn-date{font-size:11px;color:var(--text-3);margin-top:2px;line-height:1.6;}
+.cat-hist-txn-count{font-size:10px;font-weight:600;color:var(--text-3);background:var(--accent-light);padding:1px 6px;border-radius:10px;vertical-align:middle;}
 .cat-hist-txn-val{font-size:13px;font-weight:600;color:var(--red);white-space:nowrap;margin-left:12px;}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -347,6 +374,7 @@ body.chart-fullscreen-open{overflow:hidden;}
   <button class="tab" onclick="switchTab('historico')">Histórico</button>
   <button class="tab" onclick="switchTab('analise')">📊 Análise</button>
   <button class="tab" onclick="switchTab('orcamento')">💰 Orçamento</button>
+  <button class="tab" onclick="switchTab('saldo')">🏦 Saldo</button>
 </div>
 
 <div class="main">
@@ -477,44 +505,23 @@ body.chart-fullscreen-open{overflow:hidden;}
 <div class="panel" id="panel-historico">
   <div class="card">
     <div class="table-toolbar">
-      <input type="text" id="search" placeholder="Buscar descrição..." oninput="renderHistory()" style="flex:1;min-width:160px;"/>
-      <select id="filter-type" onchange="renderHistory()">
-        <option value="">Todos</option>
-        <option value="despesa">Despesas</option>
-        <option value="receita">Receitas</option>
-      </select>
-      <select id="filter-cat" onchange="renderHistory()">
-        <option value="">Categoria</option>
-      </select>
-      <select id="filter-month" onchange="renderHistory()">
-        <option value="">Mês</option>
-        <option value="01">Jan</option><option value="02">Fev</option>
-        <option value="03">Mar</option><option value="04">Abr</option>
-        <option value="05">Mai</option><option value="06">Jun</option>
-        <option value="07">Jul</option><option value="08">Ago</option>
-        <option value="09">Set</option><option value="10">Out</option>
-        <option value="11">Nov</option><option value="12">Dez</option>
-      </select>
-      <select id="filter-year" onchange="renderHistory()">
-        <option value="">Ano</option>
-        <option value="2025">2025</option>
-        <option value="2026">2026</option>
-      </select>
+      <input type="text" id="search" placeholder="Buscar descrição..." oninput="histPage=0;renderHistory()" style="flex:1;min-width:160px;"/>
+      <button class="btn btn-outline btn-sm" id="btn-clear-filters" style="display:none" onclick="clearAllFilters()">✕ Limpar filtros</button>
       <button class="btn btn-outline btn-sm" onclick="exportCSV()" title="Exportar histórico como CSV">⬇ Exportar</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('csv-import-input').click()" title="Importar CSV">⬆ Importar CSV</button>
       <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importCSV(this)"/>
     </div>
+    <div id="active-filter-chips" class="filter-chips"></div>
     <div class="table-wrap">
-      <table>
+      <table class="history-table">
         <thead>
           <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Fonte</th>
-            <th>Tipo</th>
-            <th>Status</th>
-            <th style="text-align:right">Valor</th>
+            <th class="th-click" data-col="date" onclick="openColumnPopover('date', this)">Data <span class="th-ind"></span></th>
+            <th class="th-click" data-col="description" onclick="openColumnPopover('description', this)">Descrição <span class="th-ind"></span></th>
+            <th class="th-click" data-col="category" onclick="openColumnPopover('category', this)">Categoria <span class="th-ind"></span></th>
+            <th class="th-click" data-col="type" onclick="openColumnPopover('type', this)">Tipo <span class="th-ind"></span></th>
+            <th class="th-click" data-col="status" onclick="openColumnPopover('status', this)">Status <span class="th-ind"></span></th>
+            <th class="th-click" data-col="value" style="text-align:right" onclick="openColumnPopover('value', this)">Valor <span class="th-ind"></span></th>
             <th style="width:110px;text-align:center">Ações</th>
           </tr>
         </thead>
@@ -666,6 +673,57 @@ body.chart-fullscreen-open{overflow:hidden;}
   </div>
 </div>
 
+<!-- ======================== SALDO BANCÁRIO ======================== -->
+<div class="panel" id="panel-saldo">
+
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-title">Registrar saldo do banco</div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.5;">
+      Informe quanto você tem no banco. Esses registros são independentes dos lançamentos — servem só para acompanhar a evolução do seu dinheiro real.
+    </p>
+    <div class="form-grid cols3">
+      <div class="field">
+        <label>Data</label>
+        <div class="date-stepper">
+          <input type="date" id="saldo-date"/>
+          <div class="date-step-group">
+            <button type="button" class="date-step-btn" onclick="stepDate('saldo-date',-1)" title="Dia anterior">−</button>
+            <button type="button" class="date-step-btn" onclick="stepDate('saldo-date',1)" title="Dia seguinte">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Saldo total (R$)</label>
+        <input type="number" id="saldo-value" step="0.01" placeholder="0,00"/>
+      </div>
+      <div class="field">
+        <label>Observação (opcional)</label>
+        <input type="text" id="saldo-note" placeholder="Ex: após pagar o cartão"/>
+      </div>
+    </div>
+    <div class="form-footer">
+      <span class="form-hint">Se já houver registro na mesma data, ele será substituído.</span>
+      <button class="btn btn-primary" onclick="saveSaldoEntry()">Registrar saldo</button>
+    </div>
+  </div>
+
+  <div class="orc-metrics" id="saldo-metrics" style="grid-template-columns:repeat(3,1fr);"></div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-title" style="font-size:14px;margin-bottom:4px;">Evolução do saldo real</div>
+    <div id="saldo-chart" style="height:260px;"></div>
+  </div>
+
+  <div class="card" style="padding:0;">
+    <table class="orc-table">
+      <thead><tr>
+        <th>Data</th><th>Saldo</th><th>Variação</th><th style="text-align:left">Observação</th><th></th>
+      </tr></thead>
+      <tbody id="saldo-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <div class="chart-fullscreen-modal" id="chart-fullscreen-modal" onclick="closeChartFullscreen(event)">
@@ -693,6 +751,7 @@ body.chart-fullscreen-open{overflow:hidden;}
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="col-popover" class="col-popover" style="display:none"></div>
 
 <!-- ======================== MODAL: HISTÓRICO DE CATEGORIA ======================== -->
 <div class="modal-overlay" id="cat-history-modal" onclick="if(event.target===this)closeCatHistory()">
@@ -831,13 +890,55 @@ function selectCat(cat, btn) {
   buildDescChips(cat, '');
 }
 
+const DESC_SUGGESTION_LIMIT = 10;
+
+function normalizeDesc(s) {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Sugestões vindas do histórico real (frequência + recência), com a lista fixa como fallback
+function getDescSuggestions(cat, filter) {
+  const now = new Date();
+  const stats = new Map(); // desc normalizada -> {label, count, last}
+  for (const t of allTxns) {
+    if (t.category !== cat || !t.description) continue;
+    const key = normalizeDesc(t.description);
+    if (!key) continue;
+    const s = stats.get(key) || { label: t.description.trim(), count: 0, last: new Date(0) };
+    s.count++;
+    const d = parseDate(t.date);
+    if (d > s.last) { s.last = d; s.label = t.description.trim(); }
+    stats.set(key, s);
+  }
+  for (const seed of (CAT_DESC_MAP[cat] || [])) {
+    const key = normalizeDesc(seed);
+    if (!stats.has(key)) stats.set(key, { label: seed, count: 0, last: new Date(0) });
+  }
+  let list = [...stats.values()].map(s => {
+    const days = Math.max(0, (now - s.last) / 86400000);
+    return { label: s.label, score: s.count * (0.2 + Math.exp(-days / 90)) };
+  });
+  if (filter) {
+    const f = normalizeDesc(filter);
+    list = list.filter(s => normalizeDesc(s.label).includes(f));
+    for (const s of list) {
+      const n = normalizeDesc(s.label);
+      if (n.startsWith(f)) s.score += 100;
+      else if (n.includes(' ' + f)) s.score += 50;
+    }
+  }
+  list.sort((a, b) => b.score - a.score || collatorPT.compare(a.label, b.label));
+  return list.slice(0, DESC_SUGGESTION_LIMIT).map(s => s.label);
+}
+
+let currentDescSuggestions = [];
+
 function buildDescChips(cat, filter) {
-  const descs = CAT_DESC_MAP[cat] || [];
   const el = document.getElementById('desc-chips');
-  const filtered = filter ? descs.filter(d => d.toLowerCase().includes(filter.toLowerCase())) : descs;
-  if (!filtered.length) { el.innerHTML = ''; return; }
-  el.innerHTML = filtered.map(d =>
-    `<button class="chip-btn chip-desc" onclick="applyDesc('${d.replace(/'/g,"\\'")}')">${d}</button>`
+  currentDescSuggestions = getDescSuggestions(cat, filter);
+  if (!currentDescSuggestions.length) { el.innerHTML = ''; return; }
+  el.innerHTML = currentDescSuggestions.map((d, i) =>
+    `<button class="chip-btn chip-desc" onclick="applyDescIdx(${i})">${esc(d)}</button>`
   ).join('');
 }
 
@@ -845,8 +946,8 @@ function filterDescChips() {
   if (selectedCat) buildDescChips(selectedCat, document.getElementById('txn-desc').value);
 }
 
-function applyDesc(desc) {
-  document.getElementById('txn-desc').value = desc;
+function applyDescIdx(i) {
+  document.getElementById('txn-desc').value = currentDescSuggestions[i];
   document.querySelectorAll('#desc-chips .chip-btn').forEach(b => b.classList.remove('chip-active'));
   event.target.classList.add('chip-active');
   document.getElementById('txn-value').focus();
@@ -923,12 +1024,46 @@ async function getPurchases() {
 async function savePurchases(data) {
   await userDoc('purchases').set({ items: data });
 }
+async function getSaldos() {
+  try {
+    const snap = await userDoc('saldos').get();
+    return snap.exists ? (snap.data().items || []) : [];
+  } catch { return []; }
+}
+async function saveSaldos(data) {
+  await userDoc('saldos').set({ items: data });
+}
 
 let allTxns = [];
 let allPurchases = [];
+let allSaldos = [];
 let currentType = 'despesa';
 let histPage = 0;
 const PAGE_SIZE = 30;
+
+// Estado dos filtros/ordenação da tabela de histórico (null = filtro inativo)
+const histState = {
+  sort: { col: 'date', dir: 'desc' },
+  filters: {
+    dates: null,         // Set<"DD/MM/AAAA"> ('' = sem data)
+    description: '',
+    category: null,      // Set<string>
+    type: null,          // Set<string>
+    status: null,        // Set<string> (valores normalizados)
+    valueMin: null,
+    valueMax: null
+  }
+};
+let popoverCol = null;
+const collatorPT = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+const COL_SORTERS = {
+  date: (a,b) => parseDate(a.date) - parseDate(b.date),
+  value: (a,b) => (a.value||0) - (b.value||0),
+  description: (a,b) => collatorPT.compare(a.description||'', b.description||'') || parseDate(b.date) - parseDate(a.date),
+  category: (a,b) => collatorPT.compare(a.category||'', b.category||'') || parseDate(b.date) - parseDate(a.date),
+  type: (a,b) => collatorPT.compare(a.type||'', b.type||'') || parseDate(b.date) - parseDate(a.date),
+  status: (a,b) => collatorPT.compare(normalizeStatus(a.status), normalizeStatus(b.status)) || parseDate(b.date) - parseDate(a.date)
+};
 
 // =================== INIT ===================
 async function init() {
@@ -941,18 +1076,22 @@ async function init() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('txn-date').value = today;
   document.getElementById('prc-date').value = today;
+  document.getElementById('saldo-date').value = today;
 
   // Load legacy (embedded) + new (storage)
   const newTxns = await getNewTransactions();
-  allTxns = [...LEGACY_DATA, ...newTxns];
+  // Garante id estável em todos (legacy ganha id sintético; nunca é persistido)
+  allTxns = [...LEGACY_DATA.map((t,i) => ({ ...t, id: t.id || `legacy_${i}` })), ...newTxns];
   if (newTxns.length > 0) {
     showToast(`${newTxns.length} lançamentos novos carregados.`, 'success');
   }
 
   allPurchases = await getPurchases();
+  allSaldos = await getSaldos();
 
   updateHeader();
   renderHistory();
+  updateThIndicators();
   renderPurchasesList();
 }
 
@@ -962,11 +1101,6 @@ function getCats(type) {
 }
 function populateCatSelects() {
   populateCatSelect('prc-cat', 'despesa');
-  const fc = document.getElementById('filter-cat');
-  fc.innerHTML = '<option value="">Categoria</option>';
-  [...CATEGORIES_DESPESA, ...CATEGORIES_RECEITA].sort().forEach(c => {
-    fc.innerHTML += `<option value="${c}">${c}</option>`;
-  });
 }
 function populateCatSelect(id, type) {
   const el = document.getElementById(id);
@@ -1149,26 +1283,143 @@ function renderPurchasesList() {
     </div>`).join('');
 }
 
+// =================== SALDO BANCÁRIO ===================
+async function saveSaldoEntry() {
+  const date = document.getElementById('saldo-date').value;
+  const value = parseFloat(document.getElementById('saldo-value').value);
+  const note = document.getElementById('saldo-note').value.trim();
+  if (!date || isNaN(value)) { showToast('Preencha data e valor.', 'error'); return; }
+
+  const [y,m,d] = date.split('-');
+  const dateStr = `${d}/${m}/${y}`;
+
+  const prev = [...allSaldos];
+  const idx = allSaldos.findIndex(s => s.date === dateStr);
+  if (idx >= 0) {
+    allSaldos[idx] = { ...allSaldos[idx], value, note };
+  } else {
+    allSaldos.push({ id: `saldo_${Date.now()}`, date: dateStr, value, note });
+  }
+  try {
+    await saveSaldos(allSaldos);
+  } catch(e) {
+    allSaldos = prev;
+    showToast('Erro ao salvar. Tente novamente.', 'error');
+    return;
+  }
+  document.getElementById('saldo-value').value = '';
+  document.getElementById('saldo-note').value = '';
+  showToast(idx >= 0 ? 'Saldo da data atualizado!' : 'Saldo registrado!', 'success');
+  renderSaldo();
+}
+
+async function deleteSaldoEntry(id) {
+  if (!confirm('Excluir este registro de saldo?')) return;
+  const prev = [...allSaldos];
+  allSaldos = allSaldos.filter(s => s.id !== id);
+  try {
+    await saveSaldos(allSaldos);
+  } catch(e) {
+    allSaldos = prev;
+    showToast('Erro ao excluir. Tente novamente.', 'error');
+    return;
+  }
+  showToast('Registro excluído.', 'success');
+  renderSaldo();
+}
+
+function getSaldoTeorico() {
+  return allTxns
+    .filter(t => normalizeStatus(t.status) === 'efetivado')
+    .reduce((s,t) => s + (t.type === 'receita' ? (t.value||0) : -(t.value||0)), 0);
+}
+
+function renderSaldo() {
+  const metricsEl = document.getElementById('saldo-metrics');
+  const chartEl = document.getElementById('saldo-chart');
+  const tbody = document.getElementById('saldo-tbody');
+
+  const sorted = [...allSaldos].sort((a,b) => parseDate(a.date) - parseDate(b.date));
+
+  if (!sorted.length) {
+    metricsEl.innerHTML = '';
+    chartEl.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>Nenhum saldo registrado ainda. Informe acima quanto você tem no banco.</div>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-3);padding:24px;">Nenhum registro.</td></tr>';
+    return;
+  }
+
+  const last = sorted[sorted.length-1];
+  const anterior = sorted.length > 1 ? sorted[sorted.length-2] : null;
+  const variacao = anterior ? last.value - anterior.value : null;
+  const teorico = getSaldoTeorico();
+  const diff = teorico - last.value;
+
+  metricsEl.innerHTML = `
+    <div class="orc-metric">
+      <div class="orc-metric-label">Saldo atual (banco)</div>
+      <div class="orc-metric-value" style="color:${last.value >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtCurrency(last.value)}</div>
+      <div class="orc-metric-sub">registrado em ${last.date}</div>
+    </div>
+    <div class="orc-metric">
+      <div class="orc-metric-label">Variação desde o anterior</div>
+      <div class="orc-metric-value ${variacao === null ? '' : (variacao >= 0 ? 'orc-pos' : 'orc-neg')}">${variacao === null ? '—' : (variacao >= 0 ? '+' : '') + fmtCurrency(variacao)}</div>
+      <div class="orc-metric-sub">${anterior ? 'em relação a ' + anterior.date : 'apenas um registro até agora'}</div>
+    </div>
+    <div class="orc-metric">
+      <div class="orc-metric-label">Saldo teórico (lançamentos)</div>
+      <div class="orc-metric-value">${fmtCurrency(teorico)}</div>
+      <div class="orc-metric-sub">${fmtCurrency(Math.abs(diff))} ${diff >= 0 ? 'acima' : 'abaixo'} do real — só referência</div>
+    </div>`;
+
+  const xDates = sorted.map(s => { const [d,m,y] = s.date.split('/'); return `${y}-${m}-${d}`; });
+  Plotly.newPlot(chartEl, [{
+    x: xDates,
+    y: sorted.map(s => s.value),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Saldo real',
+    line: { color: '#C8622A', width: 2 },
+    marker: { size: 8, color: '#C8622A' },
+    hovertemplate: '%{x|%d/%m/%Y}<br>R$ %{y:.2f}<extra></extra>'
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    showlegend: false,
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, type: 'date', tickformat: '%d/%m/%y' }
+  }, PLOTLY_CONFIG);
+
+  const descOrder = [...sorted].reverse();
+  tbody.innerHTML = descOrder.map((s, i) => {
+    const ant = descOrder[i+1];
+    const v = ant ? s.value - ant.value : null;
+    return `<tr>
+      <td>${s.date}</td>
+      <td style="font-weight:600">${fmtCurrency(s.value)}</td>
+      <td class="${v === null ? '' : (v >= 0 ? 'orc-pos' : 'orc-neg')}">${v === null ? '—' : (v >= 0 ? '+' : '') + fmtCurrency(v)}</td>
+      <td style="text-align:left;color:var(--text-2)">${s.note ? esc(s.note) : '—'}</td>
+      <td><button class="orc-del-btn" onclick="deleteSaldoEntry('${s.id}')" title="Excluir">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
 // =================== HISTORY ===================
 function getFilteredTxns() {
   const search = document.getElementById('search').value.toLowerCase();
-  const type = document.getElementById('filter-type').value;
-  const cat = document.getElementById('filter-cat').value;
-  const month = document.getElementById('filter-month').value;
-  const year = document.getElementById('filter-year').value;
+  const f = histState.filters;
 
-  return allTxns.filter(t => {
-    const [d,m,y] = (t.date||'').split('/');
+  const filtered = allTxns.filter(t => {
     if (search && !(t.description||'').toLowerCase().includes(search) && !(t.category||'').toLowerCase().includes(search)) return false;
-    if (type && t.type !== type) return false;
-    if (cat && t.category !== cat) return false;
-    if (month && m !== month) return false;
-    if (year && y !== year) return false;
+    if (f.dates && !f.dates.has(t.date||'')) return false;
+    if (f.description && !(t.description||'').toLowerCase().includes(f.description)) return false;
+    if (f.category && !f.category.has(t.category||'')) return false;
+    if (f.type && !f.type.has(t.type||'')) return false;
+    if (f.status && !f.status.has(normalizeStatus(t.status))) return false;
+    if (f.valueMin !== null && (t.value||0) < f.valueMin) return false;
+    if (f.valueMax !== null && (t.value||0) > f.valueMax) return false;
     return true;
-  }).sort((a,b) => {
-    const da = parseDate(a.date), db = parseDate(b.date);
-    return db - da;
   });
+
+  const cmp = COL_SORTERS[histState.sort.col] || COL_SORTERS.date;
+  return filtered.sort((a,b) => histState.sort.dir === 'asc' ? cmp(a,b) : cmp(b,a));
 }
 function renderHistory() {
   const filtered = getFilteredTxns();
@@ -1180,19 +1431,17 @@ function renderHistory() {
   document.getElementById('pag-info').textContent = `${total} lançamentos · página ${histPage+1}/${Math.max(1,pages)}`;
 
   const tbody = document.getElementById('history-body');
-  if (!slice.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:24px;">Nenhum resultado.</td></tr>'; return; }
+  if (!slice.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Nenhum resultado.</td></tr>'; return; }
 
   tbody.innerHTML = slice.map(t => {
     const instBadge = t.installment ? `<span class="badge badge-parcelado">${t.installment}</span> ` : '';
     const legacyBadge = t.legacy ? `<span class="badge badge-legacy">legacy</span>` : '';
     const statusNorm = normalizeStatus(t.status);
-    const tidx = allTxns.indexOf(t);
-    const actionBtns = `<button class="btn-action btn-edit" onclick="openEditModal(${tidx})">Editar</button><button class="btn-action btn-delete" onclick="deleteTxn(${tidx})">Excluir</button>`;
+    const actionBtns = `<button class="btn-action btn-edit" onclick="openEditModal('${t.id}')">Editar</button><button class="btn-action btn-delete" onclick="deleteTxn('${t.id}')">Excluir</button>`;
     return `<tr>
       <td style="white-space:nowrap">${t.date||''}</td>
       <td>${instBadge}${esc(t.description||'')} ${legacyBadge}</td>
-      <td><span style="font-size:12px;color:var(--text-2)">${t.category||''}</span></td>
-      <td style="font-size:12px;color:var(--text-3)">${t.source||'—'}</td>
+      <td><span style="font-size:12px;color:var(--text-2)">${esc(t.category||'')}</span></td>
       <td><span class="badge badge-${t.type}">${t.type}</span></td>
       <td><span class="badge badge-${statusNorm}">${statusNorm}</span></td>
       <td style="text-align:right" class="${t.type==='receita'?'val-pos':'val-neg'}">${t.type==='receita'?'+':'-'}${fmtCurrency(t.value)}</td>
@@ -1201,6 +1450,298 @@ function renderHistory() {
   }).join('');
 }
 function changePage(dir) { histPage += dir; renderHistory(); }
+
+// ==== COLUMN POPOVER (filtros/sort do histórico) ====
+const COL_LABELS = { date:'Data', description:'Descrição', category:'Categoria', type:'Tipo', status:'Status', value:'Valor' };
+const MESES_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+function getColumnValues(col) {
+  const counts = new Map();
+  allTxns.forEach(t => {
+    const key = col === 'status' ? normalizeStatus(t.status) : (t[col] || '');
+    counts.set(key, (counts.get(key)||0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, label: key || '(vazio)', count }))
+    .sort((a,b) => collatorPT.compare(a.label, b.label));
+}
+
+// Árvore Ano ▸ Mês ▸ Dia para o filtro de data
+function getDateTree() {
+  const years = new Map(); // ano -> Map(mês -> Map(dia -> contagem))
+  let noDate = 0;
+  allTxns.forEach(t => {
+    const p = (t.date||'').split('/');
+    if (p.length !== 3 || !p[0] || !p[1] || !p[2]) { noDate++; return; }
+    const [d,m,y] = p;
+    if (!years.has(y)) years.set(y, new Map());
+    const ym = years.get(y);
+    if (!ym.has(m)) ym.set(m, new Map());
+    const md = ym.get(m);
+    md.set(d, (md.get(d)||0) + 1);
+  });
+  return { years, noDate };
+}
+
+function renderDateTreeHTML() {
+  const { years, noDate } = getDateTree();
+  const sel = histState.filters.dates;
+  const isSel = key => sel === null || sel.has(key);
+  let out = `<label style="display:flex;gap:8px;align-items:center;padding:4px 2px;font-weight:600;">
+      <input type="checkbox" id="cp-check-all" ${sel===null?'checked':''} onchange="toggleAllPopoverChecks(this.checked)"/> (Selecionar tudo)
+    </label><div class="cp-list cp-tree">`;
+  [...years.keys()].sort((a,b) => +b - +a).forEach(y => {
+    const months = years.get(y);
+    let yCount = 0, yHtml = '';
+    [...months.keys()].sort((a,b) => +b - +a).forEach(m => {
+      const days = months.get(m);
+      let mCount = 0;
+      const dHtml = [...days.keys()].sort((a,b) => +a - +b).map(d => {
+        const c = days.get(d);
+        mCount += c;
+        return `<label><input type="checkbox" class="cp-check" value="${d}/${m}/${y}" ${isSel(`${d}/${m}/${y}`)?'checked':''} onchange="syncTreeGroups()"/> <span>dia ${d}</span><span class="cp-count">${c}</span></label>`;
+      }).join('');
+      yCount += mCount;
+      yHtml += `<div class="cp-node">
+        <div class="cp-row"><span class="cp-toggle" onclick="toggleTreeNode(this)">▸</span>
+        <label><input type="checkbox" class="cp-group" onchange="onGroupCheck(this)"/> <span>${MESES_PT[+m-1]||m}</span><span class="cp-count">${mCount}</span></label></div>
+        <div class="cp-children" style="display:none">${dHtml}</div>
+      </div>`;
+    });
+    out += `<div class="cp-node">
+      <div class="cp-row"><span class="cp-toggle" onclick="toggleTreeNode(this)">▸</span>
+      <label><input type="checkbox" class="cp-group" onchange="onGroupCheck(this)"/> <span>${y}</span><span class="cp-count">${yCount}</span></label></div>
+      <div class="cp-children" style="display:none">${yHtml}</div>
+    </div>`;
+  });
+  if (noDate) out += `<label style="margin-left:16px"><input type="checkbox" class="cp-check" value="" ${isSel('')?'checked':''} onchange="syncTreeGroups()"/> <span>(sem data)</span><span class="cp-count">${noDate}</span></label>`;
+  return out + `</div>`;
+}
+
+function toggleTreeNode(el) {
+  const node = el.closest('.cp-node');
+  const kids = node.querySelector(':scope > .cp-children');
+  const open = kids.style.display !== 'none';
+  kids.style.display = open ? 'none' : '';
+  el.textContent = open ? '▸' : '▾';
+}
+function onGroupCheck(cb) {
+  cb.indeterminate = false;
+  cb.closest('.cp-node').querySelectorAll('.cp-check, .cp-group').forEach(x => {
+    if (x !== cb) { x.checked = cb.checked; x.indeterminate = false; }
+  });
+  syncTreeGroups();
+}
+function syncTreeGroups() {
+  document.querySelectorAll('#col-popover .cp-group').forEach(g => {
+    const leaves = [...g.closest('.cp-node').querySelectorAll('.cp-check')];
+    const c = leaves.filter(l => l.checked).length;
+    g.checked = leaves.length > 0 && c === leaves.length;
+    g.indeterminate = c > 0 && c < leaves.length;
+  });
+  const all = [...document.querySelectorAll('#col-popover .cp-check')];
+  const chkAll = document.getElementById('cp-check-all');
+  if (chkAll && all.length) {
+    const c = all.filter(l => l.checked).length;
+    chkAll.checked = c === all.length;
+    chkAll.indeterminate = c > 0 && c < all.length;
+  }
+}
+
+function isColFiltered(col) {
+  const f = histState.filters;
+  if (col === 'date') return f.dates !== null;
+  if (col === 'description') return f.description !== '';
+  if (col === 'value') return f.valueMin !== null || f.valueMax !== null;
+  return f[col] !== null;
+}
+function hasActiveFilters() {
+  return ['date','description','category','type','status','value'].some(isColFiltered);
+}
+
+function renderColumnPopover(col) {
+  const sort = histState.sort;
+  const numeric = col === 'date' || col === 'value';
+  const ascLabel = numeric ? '↑ Ordenar crescente' : '↑ Ordenar A→Z';
+  const descLabel = numeric ? '↓ Ordenar decrescente' : '↓ Ordenar Z→A';
+  let html = `<div class="cp-title">${COL_LABELS[col]}</div>
+    <div class="cp-sort">
+      <button class="${sort.col===col&&sort.dir==='asc'?'active':''}" onclick="setSort('${col}','asc')">${ascLabel}</button>
+      <button class="${sort.col===col&&sort.dir==='desc'?'active':''}" onclick="setSort('${col}','desc')">${descLabel}</button>
+    </div>`;
+
+  const f = histState.filters;
+  if (col === 'date') {
+    html += renderDateTreeHTML();
+  } else if (col === 'description') {
+    html += `<input type="text" class="cp-search" id="cp-desc-input" placeholder="Filtrar descrição..." value="${esc(f.description)}" onkeydown="if(event.key==='Enter')applyColumnFilter('description')"/>`;
+  } else if (col === 'value') {
+    html += `<div class="cp-range">
+      <input type="number" step="0.01" id="cp-val-min" placeholder="Mín" value="${f.valueMin!==null?f.valueMin:''}"/>
+      <input type="number" step="0.01" id="cp-val-max" placeholder="Máx" value="${f.valueMax!==null?f.valueMax:''}"/>
+    </div>`;
+  } else {
+    const active = f[col];
+    const values = getColumnValues(col);
+    const searchBox = values.length > 8 ? `<input type="text" class="cp-search" placeholder="Buscar..." oninput="filterPopoverList(this)"/>` : '';
+    html += searchBox + `
+      <label style="display:flex;gap:8px;align-items:center;padding:4px 2px;font-weight:600;">
+        <input type="checkbox" id="cp-check-all" ${active===null?'checked':''} onchange="toggleAllPopoverChecks(this.checked)"/> (Selecionar tudo)
+      </label>
+      <div class="cp-list">` +
+      values.map(v => `<label data-label="${esc(v.label.toLowerCase())}">
+        <input type="checkbox" class="cp-check" value="${esc(v.key)}" ${active===null||active.has(v.key)?'checked':''}/>
+        <span>${esc(v.label)}</span><span class="cp-count">${v.count}</span>
+      </label>`).join('') +
+      `</div>`;
+  }
+
+  html += `<div class="cp-foot">
+    <button class="btn btn-outline btn-sm" onclick="clearColumnFilter('${col}')">Limpar</button>
+    <button class="btn btn-sm" style="background:var(--accent);color:#fff;border:none;" onclick="applyColumnFilter('${col}')">Aplicar</button>
+  </div>`;
+  return html;
+}
+
+let popoverAnchorEl = null;
+
+function positionColumnPopover() {
+  const pop = document.getElementById('col-popover');
+  if (!popoverCol || !popoverAnchorEl) return;
+  const rect = popoverAnchorEl.getBoundingClientRect();
+  // Âncora saiu totalmente da tela: fecha
+  if (rect.bottom < 0 || rect.top > window.innerHeight) { closeColumnPopover(); return; }
+  const popW = pop.offsetWidth, popH = pop.offsetHeight;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - popW - 8));
+  let top = rect.bottom + 4;
+  if (top + popH > window.innerHeight - 8) top = Math.max(8, rect.top - popH - 4);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+
+function openColumnPopover(col, thEl) {
+  if (popoverCol === col) { closeColumnPopover(); return; }
+  popoverCol = col;
+  popoverAnchorEl = thEl;
+  const pop = document.getElementById('col-popover');
+  pop.innerHTML = renderColumnPopover(col);
+  pop.style.visibility = 'hidden';
+  pop.style.display = 'block';
+  positionColumnPopover();
+  pop.style.visibility = 'visible';
+  if (col === 'date') syncTreeGroups();
+}
+function closeColumnPopover() {
+  popoverCol = null;
+  popoverAnchorEl = null;
+  document.getElementById('col-popover').style.display = 'none';
+}
+
+function filterPopoverList(inputEl) {
+  const q = inputEl.value.toLowerCase();
+  document.querySelectorAll('#col-popover .cp-list label').forEach(l => {
+    l.style.display = (l.dataset.label||'').includes(q) ? '' : 'none';
+  });
+}
+function toggleAllPopoverChecks(checked) {
+  const pop = document.getElementById('col-popover');
+  if (pop.querySelector('.cp-tree')) {
+    pop.querySelectorAll('.cp-check, .cp-group').forEach(x => { x.checked = checked; x.indeterminate = false; });
+    return;
+  }
+  pop.querySelectorAll('.cp-list label').forEach(l => {
+    if (l.style.display !== 'none') l.querySelector('.cp-check').checked = checked;
+  });
+}
+
+function applyColumnFilter(col) {
+  const f = histState.filters;
+  if (col === 'description') {
+    f.description = document.getElementById('cp-desc-input').value.trim().toLowerCase();
+  } else if (col === 'value') {
+    const min = document.getElementById('cp-val-min').value;
+    const max = document.getElementById('cp-val-max').value;
+    f.valueMin = min === '' ? null : parseFloat(min);
+    f.valueMax = max === '' ? null : parseFloat(max);
+  } else {
+    const filterKey = col === 'date' ? 'dates' : col;
+    const checks = [...document.querySelectorAll('#col-popover .cp-check')];
+    const selected = new Set(checks.filter(c => c.checked).map(c => c.value));
+    // Todos marcados = filtro inativo (itens futuros continuam visíveis)
+    f[filterKey] = selected.size === checks.length ? null : selected;
+  }
+  histPage = 0;
+  closeColumnPopover();
+  afterFilterChange();
+}
+function clearColumnFilter(col) {
+  const f = histState.filters;
+  if (col === 'description') f.description = '';
+  else if (col === 'value') { f.valueMin = null; f.valueMax = null; }
+  else f[col === 'date' ? 'dates' : col] = null;
+  histPage = 0;
+  closeColumnPopover();
+  afterFilterChange();
+}
+function clearAllFilters() {
+  const f = histState.filters;
+  f.dates = null; f.description = ''; f.category = null;
+  f.type = null; f.status = null; f.valueMin = null; f.valueMax = null;
+  document.getElementById('search').value = '';
+  histPage = 0;
+  closeColumnPopover();
+  afterFilterChange();
+}
+function setSort(col, dir) {
+  histState.sort = { col, dir };
+  closeColumnPopover();
+  updateThIndicators();
+  renderHistory();
+}
+function afterFilterChange() {
+  updateThIndicators();
+  renderActiveFilterChips();
+  renderHistory();
+}
+
+function updateThIndicators() {
+  document.querySelectorAll('.history-table th.th-click').forEach(th => {
+    const col = th.dataset.col;
+    let ind = '';
+    if (histState.sort.col === col) ind += histState.sort.dir === 'asc' ? '▲' : '▼';
+    if (isColFiltered(col)) ind += ' ⏷';
+    th.querySelector('.th-ind').textContent = ind.trim();
+  });
+}
+
+function renderActiveFilterChips() {
+  const f = histState.filters;
+  const chips = [];
+  const chip = (col, text) => `<span class="filter-chip">${text}<button onclick="clearColumnFilter('${col}')" title="Remover filtro">✕</button></span>`;
+  if (f.dates) chips.push(chip('date', `Data: ${f.dates.size} dia(s)`));
+  if (f.description) chips.push(chip('description', `Descrição: "${esc(f.description)}"`));
+  if (f.category) chips.push(chip('category', `Categoria: ${f.category.size}`));
+  if (f.type) chips.push(chip('type', `Tipo: ${[...f.type].join(', ')}`));
+  if (f.status) chips.push(chip('status', `Status: ${[...f.status].join(', ')}`));
+  if (f.valueMin !== null || f.valueMax !== null) {
+    const parts = [];
+    if (f.valueMin !== null) parts.push(`≥ ${fmtCurrency(f.valueMin)}`);
+    if (f.valueMax !== null) parts.push(`≤ ${fmtCurrency(f.valueMax)}`);
+    chips.push(chip('value', `Valor ${parts.join(' e ')}`));
+  }
+  document.getElementById('active-filter-chips').innerHTML = chips.join('');
+  document.getElementById('btn-clear-filters').style.display = hasActiveFilters() ? '' : 'none';
+}
+
+document.addEventListener('click', (e) => {
+  if (popoverCol && !e.target.closest('#col-popover') && !e.target.closest('.history-table th.th-click')) {
+    closeColumnPopover();
+  }
+});
+window.addEventListener('resize', () => { if (popoverCol) positionColumnPopover(); });
+window.addEventListener('scroll', (e) => {
+  if (popoverCol && !(e.target instanceof Node && document.getElementById('col-popover').contains(e.target))) positionColumnPopover();
+}, true);
 
 // =================== HEADER ===================
 function updateHeader() {
@@ -1673,6 +2214,10 @@ function closeChartFullscreen(event) {
   fullscreenContext = null;
 }
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && popoverCol) {
+    closeColumnPopover();
+    return;
+  }
   if (event.key === 'Escape' && document.getElementById('chart-fullscreen-modal')?.classList.contains('show')) {
     closeChartFullscreen();
   }
@@ -2195,12 +2740,14 @@ function switchTab(name) {
   if (name === 'parcelado') renderPurchasesList();
   if (name === 'analise') setTimeout(renderAnalise, 50);
   if (name === 'orcamento') setTimeout(renderOrcamento, 50);
+  if (name === 'saldo') setTimeout(renderSaldo, 50);
 }
 
 // =================== EDIT / DELETE TRANSACTION ===================
 let editingTxnIdx = -1;
 
-function openEditModal(idx) {
+function openEditModal(id) {
+  const idx = allTxns.findIndex(t => t.id === id);
   const t = allTxns[idx];
   if (!t) return;
   editingTxnIdx = idx;
@@ -2239,8 +2786,8 @@ async function saveEditTxn() {
   if (editingTxnIdx < 0) return;
   const [y,m,d] = date.split('-');
   const original = allTxns[editingTxnIdx];
-  // Se era legacy, promove para não-legacy com novo ID para persistir
-  const newId = original.id || `txn_${Date.now()}`;
+  // Se era legacy, promove para não-legacy com novo ID para persistir (id sintético legacy_* não deve ser salvo)
+  const newId = original.legacy ? `txn_${Date.now()}` : (original.id || `txn_${Date.now()}`);
   allTxns[editingTxnIdx] = { ...original, id: newId, legacy: false, date: `${d}/${m}/${y}`, description: desc, category: cat, value, type, source, status };
   try {
     await saveTransactions(allTxns);
@@ -2255,9 +2802,10 @@ async function saveEditTxn() {
   showToast('Lançamento atualizado!', 'success');
 }
 
-async function deleteTxn(idx) {
+async function deleteTxn(id) {
   if (!confirm('Excluir este lançamento? Esta ação não pode ser desfeita.')) return;
-  if (idx < 0 || idx >= allTxns.length) return;
+  const idx = allTxns.findIndex(t => t.id === id);
+  if (idx < 0) return;
   const removed = allTxns.splice(idx, 1)[0];
   try {
     await saveTransactions(allTxns);
@@ -2281,13 +2829,12 @@ function showChartModal(title, txns) {
     const total = txns.reduce((s,t) => s + (t.type === 'receita' ? t.value : -t.value), 0);
     const S = 'padding:8px 10px;border-bottom:1px solid var(--border)';
     const rows = sorted.map(t => {
-      const tidx = allTxns.indexOf(t);
       return `<tr>
       <td style="${S};white-space:nowrap">${t.date||''}</td>
       <td style="${S}">${esc(t.description||'')}</td>
-      <td style="${S};font-size:12px;color:var(--text-2)">${t.category||''}</td>
+      <td style="${S};font-size:12px;color:var(--text-2)">${esc(t.category||'')}</td>
       <td style="${S};text-align:right" class="${t.type==='receita'?'val-pos':'val-neg'}">${t.type==='receita'?'+':'-'}${fmtCurrency(t.value)}</td>
-      <td style="${S};text-align:center">${tidx>=0?`<button class="btn-action btn-edit" onclick="closeChartModal();openEditModal(${tidx})">Editar</button>`:''}</td>
+      <td style="${S};text-align:center">${t.id?`<button class="btn-action btn-edit" onclick="closeChartModal();openEditModal('${t.id}')">Editar</button>`:''}</td>
     </tr>`;
     }).join('');
     const TH = 'padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)';
@@ -2506,7 +3053,7 @@ function orcRenderAcomp() {
       ? `<span class="orc-pos">+${orcFmt(saldoCat)}</span>`
       : `<span class="orc-neg">${orcFmt(saldoCat)}</span>`;
     rows += `<tr>
-      <td><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px;margin-right:7px;background:${meta.color}18;vertical-align:middle;">${meta.icon}</span><span style="font-weight:500">${esc(c)}</span></td>
+      <td onclick="openCatHistory('${c}')"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px;margin-right:7px;background:${meta.color}18;vertical-align:middle;">${meta.icon}</span><span class="cat-row-label" style="font-weight:500">${esc(c)}</span><span style="font-size:10px;color:var(--text-3);margin-left:5px;opacity:.6;">↗</span></td>
       <td style="color:var(--text-2)">${orcFmt(b)}</td>
       <td>${orcFmtFull(g)}</td>
       <td><div class="orc-prog-wrap"><div class="orc-prog-bg"><div class="orc-prog-fill ${progClass}" style="width:${pct.toFixed(1)}%"></div></div><span style="font-size:11px;font-weight:500;min-width:30px;text-align:right;color:${pctColor}">${Math.round(pct)}%</span></div></td>
@@ -2851,8 +3398,9 @@ let _catHistState = { cat: null, offset: 0, mode: 'top5', selectedMonth: null };
 
 function openCatHistory(cat) {
   _catHistState = { cat, offset: 0, mode: 'top5', selectedMonth: null };
-  _renderCatHistory();
+  // Abre o modal antes de renderizar: com display:none o Plotly mede largura errada e corta o gráfico
   document.getElementById('cat-history-modal').classList.add('open');
+  _renderCatHistory();
 }
 
 function catHistSlide(dir) {
@@ -2973,10 +3521,22 @@ function _renderCatHistDesc() {
     if (txns.length === 0) {
       descChartEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);font-size:13px;">Nenhuma transação neste mês</div>';
     } else {
-      let html = '<div class="cat-hist-txn-list">';
+      const groups = {};
       txns.forEach(t => {
-        const parts = t.date.split('/');
-        html += '<div class="cat-hist-txn-item"><div><div class="cat-hist-txn-desc">' + esc(t.description || '—') + '</div><div class="cat-hist-txn-date">' + parts[0] + '/' + parts[1] + '/' + parts[2] + '</div></div><div class="cat-hist-txn-val">R$ ' + orcFmt(t.value) + '</div></div>';
+        const desc = (t.description || '—').trim();
+        if (!groups[desc]) groups[desc] = { total: 0, dates: [] };
+        groups[desc].total += t.value;
+        groups[desc].dates.push(t.date.split('/').slice(0, 2).join('/'));
+      });
+      const list = Object.entries(groups)
+        .map(([desc, g]) => ({ desc, total: g.total, dates: g.dates }))
+        .sort((a, b) => b.total - a.total);
+      let html = '<div class="cat-hist-txn-list">';
+      list.forEach(g => {
+        html += '<div class="cat-hist-txn-item"><div><div class="cat-hist-txn-desc">' + esc(g.desc) +
+          (g.dates.length > 1 ? ' <span class="cat-hist-txn-count">' + g.dates.length + '×</span>' : '') +
+          '</div><div class="cat-hist-txn-date">' + g.dates.join(' · ') + '</div></div>' +
+          '<div class="cat-hist-txn-val">' + orcFmt(g.total) + '</div></div>';
       });
       html += '</div>';
       descChartEl.innerHTML = html;
