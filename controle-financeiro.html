@@ -618,7 +618,7 @@ body.chart-fullscreen-open{overflow:hidden;}
     <div class="card" style="padding:0;">
       <table class="orc-table">
         <thead><tr>
-          <th>Categoria</th><th>Orçado</th><th>Gasto</th><th>Progresso</th><th>Saldo</th>
+          <th>Categoria</th><th>Orçado</th><th>Gasto</th><th>Projeção</th><th>Progresso</th><th>Saldo</th>
         </tr></thead>
         <tbody id="orc-tbody-acomp"></tbody>
       </table>
@@ -902,12 +902,14 @@ function getDescSuggestions(cat, filter) {
   const stats = new Map(); // desc normalizada -> {label, count, last}
   for (const t of allTxns) {
     if (t.category !== cat || !t.description) continue;
-    const key = normalizeDesc(t.description);
+    // Texto após "|" é observação — sugere e agrupa só pela parte principal
+    const base = String(t.description).split('|')[0].trim();
+    const key = normalizeDesc(base);
     if (!key) continue;
-    const s = stats.get(key) || { label: t.description.trim(), count: 0, last: new Date(0) };
+    const s = stats.get(key) || { label: base, count: 0, last: new Date(0) };
     s.count++;
     const d = parseDate(t.date);
-    if (d > s.last) { s.last = d; s.label = t.description.trim(); }
+    if (d > s.last) { s.last = d; s.label = base; }
     stats.set(key, s);
   }
   for (const seed of (CAT_DESC_MAP[cat] || [])) {
@@ -3052,10 +3054,16 @@ function orcRenderAcomp() {
     const saldoStr = saldoCat >= 0
       ? `<span class="orc-pos">+${orcFmt(saldoCat)}</span>`
       : `<span class="orc-neg">${orcFmt(saldoCat)}</span>`;
+    const projCat = day > 0 ? Math.round((g / day) * daysInMonth) : 0;
+    let projStr;
+    if (g === 0) projStr = `<span style="color:var(--text-3)">—</span>`;
+    else if (b > 0 && projCat > b) projStr = `<span class="orc-neg">${orcFmt(projCat)}</span>`;
+    else projStr = `<span style="color:var(--text-2)">${orcFmt(projCat)}</span>`;
     rows += `<tr>
       <td onclick="openCatHistory('${c}')"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px;margin-right:7px;background:${meta.color}18;vertical-align:middle;">${meta.icon}</span><span class="cat-row-label" style="font-weight:500">${esc(c)}</span><span style="font-size:10px;color:var(--text-3);margin-left:5px;opacity:.6;">↗</span></td>
       <td style="color:var(--text-2)">${orcFmt(b)}</td>
       <td>${orcFmtFull(g)}</td>
+      <td>${projStr}</td>
       <td><div class="orc-prog-wrap"><div class="orc-prog-bg"><div class="orc-prog-fill ${progClass}" style="width:${pct.toFixed(1)}%"></div></div><span style="font-size:11px;font-weight:500;min-width:30px;text-align:right;color:${pctColor}">${Math.round(pct)}%</span></div></td>
       <td>${saldoStr}</td>
     </tr>`;
@@ -3523,7 +3531,7 @@ function _renderCatHistDesc() {
     } else {
       const groups = {};
       txns.forEach(t => {
-        const desc = (t.description || '—').trim();
+        const desc = t.description ? _descriptionGroupLabel(t.description) : '—';
         if (!groups[desc]) groups[desc] = { total: 0, dates: [] };
         groups[desc].total += t.value;
         groups[desc].dates.push(t.date.split('/').slice(0, 2).join('/'));
@@ -3554,7 +3562,7 @@ function _renderCatHistDesc() {
     if (t.type !== 'despesa' || t.category !== cat) return;
     const parts = t.date.split('/');
     if (parts.length < 3 || !validYM.has(parts[1] + '/' + parts[2])) return;
-    const desc = (t.description || '—').trim();
+    const desc = t.description ? _descriptionGroupLabel(t.description) : '—';
     if (!descMap[desc]) descMap[desc] = { total: 0, months: new Set() };
     descMap[desc].total += t.value;
     descMap[desc].months.add(parts[1] + '/' + parts[2]);
